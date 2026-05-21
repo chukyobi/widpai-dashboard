@@ -11,10 +11,6 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // Ignore eslint errors on Vercel (avoids plugin incompatibilities)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   // Reduce unnecessary experimental warnings
   experimental: {
     // Use optimized package imports for large icon/component libraries

@@ -485,12 +485,12 @@ export default function ConversationsClient() {
   }
 
   return (
-    <div className="flex flex-col h-full md:flex-row w-full animate-in relative pb-[60px] md:pb-0">
+    <div className="flex flex-col h-full md:flex-row w-full animate-in relative pb-[60px] md:pb-0 overflow-hidden">
       
       {/* 1. CHAT LIST (WhatsApp Style) */}
       <div className={`
         ${selected ? 'hidden md:flex' : 'flex'} 
-        w-full md:w-[320px] lg:w-[380px] flex-col h-full border-r border-border/50 bg-card/40 backdrop-blur-md flex-shrink-0
+        w-full md:w-[320px] lg:w-[380px] flex-col h-full border-r border-border/50 bg-card/40 backdrop-blur-md flex-shrink-0 overflow-hidden
       `}>
         {/* Header */}
         <div className="px-4 py-4 border-b border-border/40 bg-background/30 flex justify-between items-center">
@@ -541,24 +541,26 @@ export default function ConversationsClient() {
                   isActive ? 'bg-primary/10 border-l-2 border-l-primary' : ''
                 }`}
               >
-                <div className={`h-12 w-12 rounded-full ${avatarColor(s.session_id)} flex items-center justify-center text-white text-sm font-bold flex-shrink-0 shadow`}>
+                <div className={`h-12 w-12 rounded-full ${avatarColor(s.session_id)} flex items-center justify-center text-white text-lg font-bold flex-shrink-0 shadow`}>
                   {initials(s.session_id)}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-center mb-0.5">
-                    <span className={`text-sm truncate ${unread > 0 ? 'font-bold text-foreground' : 'font-semibold'}`}>{s.session_id}</span>
-                    <span className={`text-[10px] ml-2 flex-shrink-0 ${unread > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                      {formatDate(s.last_message_at)}
+                <div className="flex-1 min-w-0 flex justify-between">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className={`text-[15px] truncate tracking-tight ${unread > 0 ? 'font-bold text-foreground' : 'font-semibold'}`}>
+                      {s.session_id}
                     </span>
-                  </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className={`text-xs truncate ${unread > 0 ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
+                    <span className={`text-[13px] truncate mt-0.5 ${unread > 0 ? 'text-foreground font-semibold' : 'text-muted-foreground'}`}>
                       {s.last_message || '—'}
                     </span>
+                  </div>
+                  <div className="flex flex-col items-end flex-shrink-0 gap-1.5 mt-0.5">
+                    <span className={`text-[11px] font-medium ${unread > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                      {formatDate(s.last_message_at)}
+                    </span>
                     {unread > 0 && (
-                      <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 flex-shrink-0 animate-in zoom-in shadow-sm">
-                        {unread > 99 ? '99+' : unread}
-                      </span>
+                      <div className="bg-primary rounded-full min-w-[22px] h-[22px] flex items-center justify-center px-1.5 shadow-sm animate-in zoom-in">
+                        <span className="text-[11px] font-bold text-primary-foreground leading-none">{unread > 99 ? '99+' : unread}</span>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -585,7 +587,7 @@ export default function ConversationsClient() {
           </div>
         ) : (
           <>
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 sticky top-0 z-10">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 z-10">
               <button 
                 onClick={() => setSelected(null)}
                 className="md:hidden p-2 -ml-2 rounded-full hover:bg-accent/20 transition-colors"
@@ -870,7 +872,7 @@ export default function ConversationsClient() {
             )}
 
             {/* Input Area — flex-shrink-0 keeps it pinned at bottom */}
-            <div className="px-4 py-3 border-t border-border/40 bg-card/80 backdrop-blur-xl flex-shrink-0 sticky bottom-0 z-10 flex items-center gap-2.5 relative">
+            <div className="px-4 py-3 border-t border-border/40 bg-card/80 backdrop-blur-xl flex-shrink-0 z-10 flex items-center gap-2.5 relative">
               {showEmojiPicker && (
                 <div ref={emojiPickerRef} className="absolute bottom-[100%] mb-2 left-4 z-50 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
                   <EmojiPicker

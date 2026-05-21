@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BarChart3, MessageSquare, Shield, LogOut } from "lucide-react"
+import { BarChart3, MessageSquare, Shield, LogOut, CreditCard } from "lucide-react"
 import { logoutAction } from "@/app/(auth)/actions"
 
 export function Sidebar() {
@@ -25,6 +25,10 @@ export function Sidebar() {
               <MessageSquare className="h-4 w-4 flex-shrink-0" />
               Conversations
             </Link>
+            <Link href="/payment-methods" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95">
+              <CreditCard className="h-4 w-4 flex-shrink-0" />
+              Payment Methods
+            </Link>
           </nav>
         </div>
 
@@ -39,17 +43,21 @@ export function Sidebar() {
       </div>
 
       {/* Mobile bottom nav bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/50 bg-card/80 backdrop-blur-xl py-2 safe-area-inset-bottom">
-        <Link href="/rates" className="flex flex-col items-center gap-0.5 px-6 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border/50 bg-card/80 backdrop-blur-xl py-2">
+        <Link href="/rates" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <BarChart3 className="h-5 w-5" />
           <span className="text-[10px] font-medium">Rates</span>
         </Link>
-        <Link href="/conversations" className="flex flex-col items-center gap-0.5 px-6 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+        <Link href="/conversations" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <MessageSquare className="h-5 w-5" />
           <span className="text-[10px] font-medium">Chats</span>
         </Link>
+        <Link href="/payment-methods" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+          <CreditCard className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Payments</span>
+        </Link>
         <form action={logoutAction}>
-          <button type="submit" className="flex flex-col items-center gap-0.5 px-6 py-1 rounded-xl text-muted-foreground hover:text-destructive transition-colors active:scale-95">
+          <button type="submit" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-destructive transition-colors active:scale-95">
             <LogOut className="h-5 w-5" />
             <span className="text-[10px] font-medium">Logout</span>
           </button>

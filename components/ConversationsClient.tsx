@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, MessageSquare, Bot, User as UserIcon, ArrowLeft, Zap, ChevronRight, Paperclip, Send, Smile, MoreVertical, CheckCheck, FileText, Play, Pause, X, Image as ImageIcon, Power, Shield, Camera } from 'lucide-react'
+import { Search, MessageSquare, Bot, User as UserIcon, ArrowLeft, Zap, ChevronRight, Paperclip, Send, Smile, MoreVertical, CheckCheck, FileText, Play, Pause, X, Image as ImageIcon, Power, Shield, Camera, Settings, LogOut, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import EmojiPicker from 'emoji-picker-react'
+import EmojiPicker, { Theme } from 'emoji-picker-react'
+import { logoutAction } from '@/app/(auth)/actions'
+import Link from 'next/link'
 
 interface Session {
   session_id: string
@@ -144,6 +146,7 @@ export default function ConversationsClient() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [globalPaused, setGlobalPaused] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
   
   const wsRef = useRef<WebSocket | null>(null)
@@ -215,7 +218,27 @@ export default function ConversationsClient() {
       } catch {}
     }
 
-    return () => { globalWs.close() }
+    // Poll conversations API every 15s for persistent unread counts (Vercel WebSocket fallback)
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/conversations')
+        const data = await res.json()
+        if (Array.isArray(data)) {
+          const polledUnread: Record<string, number> = {}
+          data.forEach((s: any) => {
+            if (Number(s.unread_count) > 0 && selectedRef.current !== s.session_id) {
+              polledUnread[s.session_id] = Number(s.unread_count)
+            }
+          })
+          setUnreadCounts(polledUnread)
+          setSessions(data.sort((a: Session, b: Session) =>
+            new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+          ))
+        }
+      } catch { /* silent */ }
+    }, 15000)
+
+    return () => { globalWs.close(); clearInterval(pollInterval) }
   }, [])
 
   const selectSession = useCallback(async (id: string) => {
@@ -543,8 +566,8 @@ export default function ConversationsClient() {
           </div>
         ) : (
           <>
-            {/* Chat Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0">
+              {/* Chat Area: flex-col ensures header top-stuck, input bottom-stuck, messages scroll in between */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 sticky top-0 z-10">
               {/* Back Button (Mobile Only) - Returns to List */}
               <button 
                 onClick={() => setSelected(null)}
@@ -579,13 +602,45 @@ export default function ConversationsClient() {
                     {agentStatus === 'manual' ? 'AI Bot Paused' : 'AI Bot Active'}
                   </Button>
                 )}
-                <MoreVertical className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" />
+              {/* Settings dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSettings(s => !s)}
+                    className="p-1.5 rounded-full hover:bg-accent/20 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <Settings className="h-5 w-5" />
+                  </button>
+                  {showSettings && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowSettings(false)} />
+                      <div className="absolute right-0 top-full mt-2 w-52 bg-card border border-border/50 rounded-xl shadow-2xl z-50 overflow-hidden animate-fade-in-up">
+                        <div className="p-1.5">
+                          <Link
+                            href="/payment-methods"
+                            onClick={() => setShowSettings(false)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg hover:bg-accent/50 text-foreground transition-colors"
+                          >
+                            <CreditCard className="h-4 w-4" />
+                            Payment Methods
+                          </Link>
+                          <div className="my-1 h-px bg-border/30" />
+                          <form action={logoutAction}>
+                            <button type="submit" className="w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-lg hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 transition-colors">
+                              <LogOut className="h-4 w-4" />
+                              Sign Out
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
-            {/* Messages */}
+            {/* Messages — min-h-0 is critical for flex-1 to work correctly in Safari/mobile */}
             <div
-              className="flex-1 overflow-y-auto scrollbar-none px-5 py-4 space-y-3"
+              className="flex-1 overflow-y-auto min-h-0 scrollbar-none px-4 py-4 space-y-3"
               style={{
                 backgroundImage: `radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.04) 0%, transparent 50%),
                                   radial-gradient(circle at 80% 80%, hsl(var(--accent) / 0.04) 0%, transparent 50%)`,
@@ -804,12 +859,13 @@ export default function ConversationsClient() {
               </div>
             )}
 
-            {/* Input Area */}
-            <div className="px-4 py-3 border-t border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 flex items-center gap-2.5 relative">
+            {/* Input Area — flex-shrink-0 keeps it pinned at bottom */}
+            <div className="px-4 py-3 border-t border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 sticky bottom-0 z-10 flex items-center gap-2.5 relative">
               {showEmojiPicker && (
                 <div className="absolute bottom-[70px] left-4 z-50 shadow-2xl animate-fade-in-up">
                   <EmojiPicker
                     onEmojiClick={(emojiData) => setInputMessage(prev => prev + emojiData.emoji)}
+                    theme={Theme.DARK}
                   />
                 </div>
               )}

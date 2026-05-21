@@ -4,7 +4,7 @@ import { getSessionFromRequest } from './lib/auth'
 
 const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password']
 
-export async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
   const session = await getSessionFromRequest(request)

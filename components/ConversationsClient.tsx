@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Search, MessageSquare, Bot, User as UserIcon, ArrowLeft, Zap, ChevronRight, Paperclip, Send, Smile, MoreVertical, CheckCheck, FileText, Play, Pause, X, Image as ImageIcon, Power, Shield, Camera, Settings, LogOut, CreditCard } from 'lucide-react'
+import { Search, MessageSquare, Bot, User as UserIcon, ArrowLeft, Zap, ChevronRight, Paperclip, Send, Smile, MoreVertical, CheckCheck, FileText, Play, Pause, X, Image as ImageIcon, Power, Shield, Camera, Settings, LogOut, CreditCard, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import EmojiPicker, { Theme } from 'emoji-picker-react'
 import { logoutAction } from '@/app/(auth)/actions'
@@ -189,6 +189,26 @@ export default function ConversationsClient() {
     // Global WebSocket for real-time sidebar updates
     const globalWs = new WebSocket(`${proto}://${window.location.host}/ws?sessionId=_global`)
     
+    // Modern Pop Sound
+    const playPop = () => {
+      try {
+        const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+        const ctx = new AudioContext()
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(800, ctx.currentTime)
+        osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.1)
+        gain.gain.setValueAtTime(0, ctx.currentTime)
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2)
+        osc.start(ctx.currentTime)
+        osc.stop(ctx.currentTime + 0.2)
+      } catch (e) {}
+    }
+
     globalWs.onmessage = e => {
       try {
         const data = JSON.parse(e.data)
@@ -209,6 +229,7 @@ export default function ConversationsClient() {
           })
           // Only increment unread if NOT currently in that session
           if (selectedRef.current !== data.sessionId) {
+            playPop()
             setUnreadCounts(prev => ({ ...prev, [data.sessionId]: (prev[data.sessionId] || 0) + 1 }))
           }
         }
@@ -266,15 +287,13 @@ export default function ConversationsClient() {
             if (isDuplicate) return prev
             return [...prev, data.message]
           })
-          // Clear unread for current session since we're inside it
           setUnreadCounts(prev => ({ ...prev, [id]: 0 }))
         }
         if (data.type === 'status_change') setAgentStatus(data.status)
       } catch {}
     }
 
-    // Fetch messages and status in parallel
-    setAgentStatus(null) // clear stale status while loading
+    setAgentStatus(null) 
     setAgentStatusLoading(true)
     try {
       const [msgRes, statusRes] = await Promise.all([
@@ -305,7 +324,6 @@ export default function ConversationsClient() {
     const textToSend = inputMessage;
     setInputMessage('');
 
-    // Optimistically show message as sent by the AI/agent role in UI
     const optimisticMessage: Message = {
       id: Date.now(),
       role: 'ai',
@@ -316,7 +334,6 @@ export default function ConversationsClient() {
     
     setMessages(prev => [...prev, optimisticMessage]);
     
-    // Automatically set status to manual when the human agent sends a message
     setAgentStatus('manual');
 
     try {
@@ -352,7 +369,6 @@ export default function ConversationsClient() {
     const file = e.target.files?.[0]
     if (!file) return
     setAttachFile(file)
-    // Generate a preview for images/videos
     if (file.type.startsWith('image/') || file.type.startsWith('video/')) {
       setAttachPreview(URL.createObjectURL(file))
     } else {
@@ -377,7 +393,6 @@ export default function ConversationsClient() {
       else if (attachFile.type.startsWith('video/')) msgType = 'video'
       else if (attachFile.type.startsWith('audio/')) msgType = 'audio'
 
-      // 1. Upload with XHR to track real progress
       const mediaUrl = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest()
         xhr.open('POST', '/api/upload')
@@ -401,7 +416,6 @@ export default function ConversationsClient() {
 
       setUploadProgress(null)
 
-      // 2. Optimistically show in chat
       const optimistic: Message = {
         id: Date.now(),
         role: 'ai',
@@ -414,7 +428,6 @@ export default function ConversationsClient() {
       setMessages(prev => [...prev, optimistic])
       setAgentStatus('manual')
 
-      // 3. Send via WhatsApp
       await fetch(`/api/conversations/${encodeURIComponent(selected)}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -441,7 +454,7 @@ export default function ConversationsClient() {
       })
       if (selected) setAgentStatus(newStatus)
     } catch {
-      setGlobalPaused(globalPaused) // rollback
+      setGlobalPaused(globalPaused)
     }
   }
 
@@ -449,14 +462,21 @@ export default function ConversationsClient() {
     s.session_id.toLowerCase().includes(search.toLowerCase())
   )
 
+  if (appLoading) {
+    return (
+      <div className="flex h-full w-full items-center justify-center pb-16 md:pb-0">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
   return (
-    <div className="flex h-full w-full overflow-hidden bg-background">
+    <div className="flex flex-col h-full md:flex-row w-full animate-in relative pb-[60px] md:pb-0">
       
       {/* 1. CHAT LIST (WhatsApp Style) */}
-      {/* Hidden on mobile when a chat is selected */}
       <div className={`
         ${selected ? 'hidden md:flex' : 'flex'} 
-        w-full md:w-[350px] flex-shrink-0 border-r border-border/40 bg-card/30 backdrop-blur-md flex-col h-full animate-fade-in
+        w-full md:w-[320px] lg:w-[380px] flex-col h-full border-r border-border/50 bg-card/40 backdrop-blur-md flex-shrink-0
       `}>
         {/* Header */}
         <div className="px-4 py-4 border-b border-border/40 bg-background/30 flex justify-between items-center">
@@ -493,20 +513,7 @@ export default function ConversationsClient() {
 
         {/* Session List */}
         <div className="flex-1 overflow-y-auto scrollbar-none">
-          {appLoading ? (
-            // Skeleton loader — no flash of wrong state
-            <div className="flex flex-col gap-0">
-              {[1,2,3,4,5].map(i => (
-                <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-border/10 animate-pulse">
-                  <div className="h-12 w-12 rounded-full bg-muted flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-muted rounded w-3/5" />
-                    <div className="h-2.5 bg-muted rounded w-4/5" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : filtered.length === 0 ? (
+          {filtered.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">No conversations found</p>
           ) : filtered.map((s, index) => {
             const unread = unreadCounts[s.session_id] || 0
@@ -516,7 +523,7 @@ export default function ConversationsClient() {
                 key={s.session_id}
                 onClick={() => selectSession(s.session_id)}
                 style={{ animationDelay: `${index * 40}ms` }}
-                className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-border/10 cursor-pointer hover:bg-accent/20 active:bg-accent/30 transition-all duration-200 animate-fade-in-up ${
+                className={`w-full flex items-center gap-3 px-4 py-3.5 border-b border-border/10 cursor-pointer hover:bg-accent/20 active:bg-accent/30 transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 ${
                   isActive ? 'bg-primary/10 border-l-2 border-l-primary' : ''
                 }`}
               >
@@ -525,17 +532,17 @@ export default function ConversationsClient() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-center mb-0.5">
-                    <span className={`text-sm truncate ${unread > 0 ? 'font-bold' : 'font-semibold'}`}>{s.session_id}</span>
-                    <span className={`text-[10px] ml-2 flex-shrink-0 ${unread > 0 ? 'text-emerald-500 font-semibold' : 'text-muted-foreground'}`}>
+                    <span className={`text-sm truncate ${unread > 0 ? 'font-bold text-foreground' : 'font-semibold'}`}>{s.session_id}</span>
+                    <span className={`text-[10px] ml-2 flex-shrink-0 ${unread > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                       {formatDate(s.last_message_at)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center gap-2">
-                    <span className={`text-xs truncate ${unread > 0 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs truncate ${unread > 0 ? 'text-foreground font-bold' : 'text-muted-foreground'}`}>
                       {s.last_message || '—'}
                     </span>
                     {unread > 0 && (
-                      <span className="text-[10px] font-bold bg-emerald-500 text-white rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1.5 flex-shrink-0 animate-scale-up">
+                      <span className="text-[10px] font-bold bg-primary text-primary-foreground rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 flex-shrink-0 animate-in zoom-in shadow-sm">
                         {unread > 99 ? '99+' : unread}
                       </span>
                     )}
@@ -548,13 +555,11 @@ export default function ConversationsClient() {
       </div>
 
       {/* 2. CHAT AREA */}
-      {/* Hidden on mobile when NO chat is selected */}
       <div className={`
         ${selected ? 'flex' : 'hidden md:flex'} 
         flex-1 flex flex-col h-full overflow-hidden bg-background/50 animate-fade-in
       `}>
         {!selected ? (
-          // Desktop Empty State (Only visible on desktop when no chat selected)
           <div className="hidden md:flex flex-1 flex-col items-center justify-center text-muted-foreground gap-4 h-full">
             <div className="h-20 w-20 rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
               <MessageSquare className="h-10 w-10 text-primary/30" />
@@ -566,9 +571,7 @@ export default function ConversationsClient() {
           </div>
         ) : (
           <>
-              {/* Chat Area: flex-col ensures header top-stuck, input bottom-stuck, messages scroll in between */}
               <div className="flex items-center gap-3 px-4 py-3 border-b border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 sticky top-0 z-10">
-              {/* Back Button (Mobile Only) - Returns to List */}
               <button 
                 onClick={() => setSelected(null)}
                 className="md:hidden p-2 -ml-2 rounded-full hover:bg-accent/20 transition-colors"
@@ -585,7 +588,6 @@ export default function ConversationsClient() {
               </div>
               <div className="flex items-center gap-3">
                 {agentStatus === null || agentStatusLoading ? (
-                  // Skeleton while status is loading — no flash
                   <div className="h-8 w-28 rounded-full bg-muted animate-pulse" />
                 ) : (
                   <Button
@@ -602,7 +604,6 @@ export default function ConversationsClient() {
                     {agentStatus === 'manual' ? 'AI Bot Paused' : 'AI Bot Active'}
                   </Button>
                 )}
-              {/* Settings dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setShowSettings(s => !s)}
@@ -638,9 +639,8 @@ export default function ConversationsClient() {
               </div>
             </div>
 
-            {/* Messages — min-h-0 is critical for flex-1 to work correctly in Safari/mobile */}
             <div
-              className="flex-1 overflow-y-auto min-h-0 scrollbar-none px-4 py-4 space-y-3"
+              className="flex-1 overflow-y-auto min-h-0 scrollbar-none px-4 py-4 space-y-3 relative"
               style={{
                 backgroundImage: `radial-gradient(circle at 20% 20%, hsl(var(--primary) / 0.04) 0%, transparent 50%),
                                   radial-gradient(circle at 80% 80%, hsl(var(--accent) / 0.04) 0%, transparent 50%)`,
@@ -655,7 +655,6 @@ export default function ConversationsClient() {
                 </div>
               ) : messages.map((msg, i) => {
                 const isOutgoing = msg.role === 'ai' || msg.role === 'bot'
-                const isUser = msg.role === 'human'
                 const isAdminMsg = isOutgoing && msg.is_manual === true
                 const prev = messages[i - 1]
                 const showDate = !prev || new Date(msg.created_at).toDateString() !== new Date(prev.created_at).toDateString()
@@ -669,9 +668,7 @@ export default function ConversationsClient() {
                         </span>
                       </div>
                     )}
-                    {/* User = LEFT, Outgoing (AI/Admin) = RIGHT */}
-                    <div className={`flex gap-2 max-w-[75%] ${isOutgoing ? 'ml-auto flex-row-reverse' : ''}`}>
-                      {/* Avatar */}
+                    <div className={`flex gap-2 ${isOutgoing ? 'ml-auto flex-row-reverse' : ''}`}>
                       <div className={`h-7 w-7 rounded-full flex-shrink-0 flex items-center justify-center text-xs mt-1 shadow-sm ${
                         isAdminMsg
                           ? 'bg-violet-500 text-white'
@@ -685,16 +682,15 @@ export default function ConversationsClient() {
                             ? <Bot className="h-3.5 w-3.5" />
                             : <UserIcon className="h-3.5 w-3.5" />}
                       </div>
-                      
                       {/* Bubble */}
-                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words transition-all ${
+                      <div className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed break-words transition-all max-w-[75%] ${
                         msg.media_type === 'sticker'
                           ? 'bg-transparent shadow-none border-none p-0'
                           : isAdminMsg
-                            ? 'bg-violet-600 text-white rounded-tr-sm shadow-sm hover:shadow-md'
+                            ? 'bg-violet-600 text-white rounded-tr-sm shadow-sm hover:shadow-md animate-in fade-in slide-in-from-bottom-2'
                             : isOutgoing
-                              ? 'bg-emerald-600 text-white rounded-tr-sm shadow-sm hover:shadow-md'
-                              : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm shadow-sm hover:shadow-md'
+                              ? 'bg-primary text-primary-foreground rounded-tr-sm shadow-sm hover:shadow-md animate-in fade-in slide-in-from-bottom-2'
+                              : 'bg-card border border-border/50 text-card-foreground rounded-tl-sm shadow-sm hover:shadow-md animate-in fade-in slide-in-from-bottom-2'
                       }`}>
 
                         {/* Sender label badge — only on outgoing messages */}
@@ -860,12 +856,21 @@ export default function ConversationsClient() {
             )}
 
             {/* Input Area — flex-shrink-0 keeps it pinned at bottom */}
-            <div className="px-4 py-3 border-t border-border/40 bg-card/40 backdrop-blur-md flex-shrink-0 sticky bottom-0 z-10 flex items-center gap-2.5 relative">
+            <div className="px-4 py-3 border-t border-border/40 bg-card/80 backdrop-blur-xl flex-shrink-0 sticky bottom-0 z-10 flex items-center gap-2.5 relative">
               {showEmojiPicker && (
-                <div className="absolute bottom-[70px] left-4 z-50 shadow-2xl animate-fade-in-up">
+                <div ref={emojiPickerRef} className="absolute bottom-[100%] mb-2 left-4 z-50 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
                   <EmojiPicker
                     onEmojiClick={(emojiData) => setInputMessage(prev => prev + emojiData.emoji)}
                     theme={Theme.DARK}
+                    lazyLoadEmojis={true}
+                    style={{
+                      backgroundColor: 'hsl(var(--card))',
+                      borderColor: 'hsl(var(--border) / 0.5)',
+                      '--epr-category-label-bg-color': 'hsl(var(--card))',
+                      '--epr-picker-border-radius': '1rem',
+                      '--epr-focus-bg-color': 'hsl(var(--primary) / 0.2)',
+                      '--epr-highlight-color': 'hsl(var(--primary))'
+                    } as any}
                   />
                 </div>
               )}

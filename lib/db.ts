@@ -1,9 +1,19 @@
-import { Pool } from 'pg';
+import { Pool } from 'pg'
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-});
+// Cache the pool on the global object so it persists across hot-reloads in dev
+// and across requests within the same Vercel worker process in production.
+const globalForPg = global as unknown as { pgPool?: Pool }
 
-export const query = (text: string, params?: any[]) => {
-  return pool.query(text, params);
-};
+const pool =
+  globalForPg.pgPool ??
+  new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 5,                      // max concurrent connections
+    idleTimeoutMillis: 30_000,   // release idle connections after 30s
+    connectionTimeoutMillis: 5_000,
+  })
+
+if (!globalForPg.pgPool) globalForPg.pgPool = pool
+
+export const query = (text: string, params?: any[]) => pool.query(text, params)
+

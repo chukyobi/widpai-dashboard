@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Pencil, Trash2, ToggleLeft, ToggleRight, X, Loader2, CheckCircle2, AlertCircle, Landmark, Smartphone, Building2, Hash, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -16,70 +17,50 @@ interface PaymentMethod {
   updated_at: string
 }
 
-const METHOD_CONFIG: Record<Currency, { label: string; methods: { type: MethodType; label: string; icon: React.ReactNode; fields: { key: string; label: string; placeholder: string }[] }[] }> = {
+interface FieldDef { key: string; label: string; placeholder: string }
+interface MethodDef { type: MethodType; label: string; fields: FieldDef[] }
+interface CurrencyDef { methods: MethodDef[] }
+
+const METHOD_CONFIG: Record<Currency, CurrencyDef> = {
   KES: {
-    label: '🇰🇪 Kenya Shilling (KES)',
     methods: [
-      {
-        type: 'mpesa', label: 'M-Pesa', icon: <Smartphone className="h-4 w-4" />,
-        fields: [
-          { key: 'number', label: 'Number', placeholder: '07XXXXXXXX' },
-          { key: 'name', label: 'Name', placeholder: 'Account holder name' },
-        ]
-      },
-      {
-        type: 'airtel', label: 'Airtel Money', icon: <Smartphone className="h-4 w-4" />,
-        fields: [
-          { key: 'number', label: 'Number', placeholder: '07XXXXXXXX' },
-          { key: 'name', label: 'Name', placeholder: 'Account holder name' },
-        ]
-      },
-      {
-        type: 'paybill', label: 'Pay Bill', icon: <Building2 className="h-4 w-4" />,
-        fields: [
-          { key: 'paybill_number', label: 'Pay Bill Number', placeholder: '000000' },
-          { key: 'account_number', label: 'Account Number', placeholder: 'Account number' },
-          { key: 'bank_name', label: 'Bank Name', placeholder: 'e.g. KCB, Equity' },
-          { key: 'name', label: 'Name', placeholder: 'Account holder name' },
-        ]
-      },
-      {
-        type: 'till', label: 'Till Number', icon: <Hash className="h-4 w-4" />,
-        fields: [
-          { key: 'till_number', label: 'Till Number', placeholder: '000000' },
-          { key: 'business_name', label: 'Business Name', placeholder: 'Business name' },
-        ]
-      },
-      {
-        type: 'bank', label: 'Bank', icon: <Landmark className="h-4 w-4" />,
-        fields: [
-          { key: 'account_number', label: 'Account Number', placeholder: 'Account number' },
-          { key: 'bank_name', label: 'Bank Name', placeholder: 'Bank name' },
-          { key: 'name', label: 'Account Name', placeholder: 'Account holder name' },
-        ]
-      },
+      { type: 'mpesa', label: 'M-Pesa', fields: [
+        { key: 'number', label: 'Number', placeholder: '07XXXXXXXX' },
+        { key: 'name', label: 'Name', placeholder: 'Account holder name' },
+      ]},
+      { type: 'airtel', label: 'Airtel Money', fields: [
+        { key: 'number', label: 'Number', placeholder: '07XXXXXXXX' },
+        { key: 'name', label: 'Name', placeholder: 'Account holder name' },
+      ]},
+      { type: 'paybill', label: 'Pay Bill', fields: [
+        { key: 'paybill_number', label: 'Pay Bill Number', placeholder: '000000' },
+        { key: 'account_number', label: 'Account Number', placeholder: 'Account number' },
+        { key: 'bank_name', label: 'Bank Name', placeholder: 'e.g. KCB, Equity' },
+        { key: 'name', label: 'Name', placeholder: 'Account holder name' },
+      ]},
+      { type: 'till', label: 'Till Number', fields: [
+        { key: 'till_number', label: 'Till Number', placeholder: '000000' },
+        { key: 'business_name', label: 'Business Name', placeholder: 'Business name' },
+      ]},
+      { type: 'bank', label: 'Bank', fields: [
+        { key: 'account_number', label: 'Account Number', placeholder: 'Account number' },
+        { key: 'bank_name', label: 'Bank Name', placeholder: 'Bank name' },
+        { key: 'name', label: 'Account Name', placeholder: 'Account holder name' },
+      ]},
     ]
   },
   NGN: {
-    label: '🇳🇬 Nigerian Naira (NGN)',
     methods: [
-      {
-        type: 'bank', label: 'Bank Account', icon: <Landmark className="h-4 w-4" />,
-        fields: [
-          { key: 'account_number', label: 'Account Number', placeholder: '0000000000' },
-          { key: 'account_name', label: 'Account Name', placeholder: 'Account holder name' },
-          { key: 'bank_name', label: 'Bank Name', placeholder: 'e.g. GTB, Access, Zenith' },
-        ]
-      },
+      { type: 'bank', label: 'Bank Account', fields: [
+        { key: 'account_number', label: 'Account Number', placeholder: '0000000000' },
+        { key: 'account_name', label: 'Account Name', placeholder: 'Account holder name' },
+        { key: 'bank_name', label: 'Bank Name', placeholder: 'e.g. GTB, Access, Zenith' },
+      ]},
     ]
   }
 }
 
-const METHOD_LABELS: Record<MethodType, string> = {
-  mpesa: 'M-Pesa', airtel: 'Airtel Money', paybill: 'Pay Bill', till: 'Till', bank: 'Bank'
-}
-
-const METHOD_ICONS: Record<MethodType, React.ReactNode> = {
+const METHOD_ICON: Record<MethodType, JSX.Element> = {
   mpesa: <Smartphone className="h-4 w-4" />,
   airtel: <Smartphone className="h-4 w-4" />,
   paybill: <Building2 className="h-4 w-4" />,
@@ -87,7 +68,11 @@ const METHOD_ICONS: Record<MethodType, React.ReactNode> = {
   bank: <Landmark className="h-4 w-4" />,
 }
 
-function getMethodSummary(m: PaymentMethod): string {
+const METHOD_LABEL: Record<MethodType, string> = {
+  mpesa: 'M-Pesa', airtel: 'Airtel Money', paybill: 'Pay Bill', till: 'Till', bank: 'Bank'
+}
+
+function getSummary(m: PaymentMethod): string {
   const d = m.details
   if (m.method_type === 'mpesa' || m.method_type === 'airtel') return `${d.number} · ${d.name}`
   if (m.method_type === 'paybill') return `${d.paybill_number} · ${d.account_number} · ${d.bank_name}`
@@ -97,25 +82,33 @@ function getMethodSummary(m: PaymentMethod): string {
 }
 
 export default function PaymentMethodsPage() {
+  const [mounted, setMounted] = useState(false)
   const [methods, setMethods] = useState<PaymentMethod[]>([])
   const [loading, setLoading] = useState(true)
   const [activeCurrency, setActiveCurrency] = useState<Currency>('KES')
-  const [showForm, setShowForm] = useState(false)
-  const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null)
+
+  // Modal state
+  const [showModal, setShowModal] = useState(false)
+  const [editing, setEditing] = useState<PaymentMethod | null>(null)
   const [formCurrency, setFormCurrency] = useState<Currency>('KES')
-  const [formMethodType, setFormMethodType] = useState<MethodType>('mpesa')
+  const [formType, setFormType] = useState<MethodType>('mpesa')
   const [formDetails, setFormDetails] = useState<Record<string, string>>({})
   const [formActive, setFormActive] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
 
-  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type })
+  // Toast
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [delConfirm, setDelConfirm] = useState<number | null>(null)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  const notify = (msg: string, ok = true) => {
+    setToast({ msg, ok })
     setTimeout(() => setToast(null), 3000)
   }
 
   const loadMethods = useCallback(async () => {
+    setLoading(true)
     try {
       const res = await fetch('/api/payment-methods')
       const data = await res.json()
@@ -125,90 +118,220 @@ export default function PaymentMethodsPage() {
 
   useEffect(() => { loadMethods() }, [loadMethods])
 
-  const openCreate = () => {
-    setEditingMethod(null)
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (showModal) document.body.style.overflow = 'hidden'
+    else document.body.style.overflow = ''
+    return () => { document.body.style.overflow = '' }
+  }, [showModal])
+
+  const openAdd = () => {
+    const first = METHOD_CONFIG[activeCurrency].methods[0]
+    setEditing(null)
     setFormCurrency(activeCurrency)
-    const firstMethod = METHOD_CONFIG[activeCurrency].methods[0]
-    setFormMethodType(firstMethod.type)
+    setFormType(first.type)
     setFormDetails({})
     setFormActive(false)
-    setShowForm(true)
+    setShowModal(true)
   }
 
   const openEdit = (m: PaymentMethod) => {
-    setEditingMethod(m)
+    setEditing(m)
     setFormCurrency(m.currency)
-    setFormMethodType(m.method_type)
+    setFormType(m.method_type)
     setFormDetails({ ...m.details })
     setFormActive(m.is_active)
-    setShowForm(true)
+    setShowModal(true)
   }
 
+  const closeModal = () => setShowModal(false)
+
+  const switchCurrency = (c: Currency) => {
+    setFormCurrency(c)
+    const first = METHOD_CONFIG[c].methods[0]
+    setFormType(first.type)
+    setFormDetails({})
+  }
+
+  const switchType = (t: MethodType) => {
+    setFormType(t)
+    setFormDetails({})
+  }
+
+  const currentFields = METHOD_CONFIG[formCurrency]?.methods.find(m => m.type === formType)?.fields ?? []
+  const allFilled = currentFields.every(f => formDetails[f.key]?.trim())
+
   const handleSave = async () => {
+    if (!allFilled || saving) return
     setSaving(true)
     try {
-      const body = { currency: formCurrency, method_type: formMethodType, details: formDetails, is_active: formActive }
-      const res = editingMethod
-        ? await fetch(`/api/payment-methods/${editingMethod.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-        : await fetch('/api/payment-methods', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      const body = { currency: formCurrency, method_type: formType, details: formDetails, is_active: formActive }
+      const url = editing ? `/api/payment-methods/${editing.id}` : '/api/payment-methods'
+      const method = editing ? 'PUT' : 'POST'
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) throw new Error()
-      showToast(editingMethod ? 'Payment method updated!' : 'Payment method added!')
-      setShowForm(false)
+      notify(editing ? 'Payment method updated!' : 'Payment method added!')
+      closeModal()
       loadMethods()
     } catch {
-      showToast('Failed to save. Please try again.', 'error')
+      notify('Failed to save. Please try again.', false)
     } finally { setSaving(false) }
   }
 
-  const handleToggleActive = async (m: PaymentMethod) => {
-    const updated = methods.map(x => x.id === m.id ? { ...x, is_active: !x.is_active } : x)
-    setMethods(updated)
+  const handleToggle = async (m: PaymentMethod) => {
+    setMethods(prev => prev.map(x => x.id === m.id ? { ...x, is_active: !x.is_active } : x))
     try {
-      await fetch(`/api/payment-methods/${m.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_active: !m.is_active }) })
-    } catch {
-      setMethods(methods) // rollback
-      showToast('Failed to update status', 'error')
-    }
+      await fetch(`/api/payment-methods/${m.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !m.is_active })
+      })
+    } catch { notify('Failed to update status', false); loadMethods() }
   }
 
   const handleDelete = async (id: number) => {
     setMethods(prev => prev.filter(m => m.id !== id))
-    setDeleteConfirm(null)
+    setDelConfirm(null)
     try {
       await fetch(`/api/payment-methods/${id}`, { method: 'DELETE' })
-      showToast('Payment method deleted')
-    } catch {
-      showToast('Failed to delete', 'error')
-      loadMethods()
-    }
+      notify('Payment method deleted')
+    } catch { notify('Failed to delete', false); loadMethods() }
   }
 
-  const currentFields = METHOD_CONFIG[formCurrency]?.methods.find(m => m.type === formMethodType)?.fields || []
-  const filteredMethods = methods.filter(m => m.currency === activeCurrency)
+  const filtered = methods.filter(m => m.currency === activeCurrency)
+
+  // Modal rendered via portal to escape overflow/stacking context issues
+  const modal = mounted && showModal ? createPortal(
+    <div
+      className="fixed inset-0 flex items-end sm:items-center justify-center p-4"
+      style={{ zIndex: 9999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in-up"
+        style={{ maxHeight: '90vh', background: 'hsl(var(--card))', border: '1px solid hsl(var(--border) / 0.5)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid hsl(var(--border) / 0.3)' }}>
+          <h2 className="font-bold text-base">{editing ? 'Edit Payment Method' : 'Add Payment Method'}</h2>
+          <button onClick={closeModal} className="p-1.5 rounded-full hover:bg-accent/30 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Currency */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-2">Currency</label>
+            <div className="flex gap-2">
+              {(['KES', 'NGN'] as Currency[]).map(c => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => switchCurrency(c)}
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                    formCurrency === c
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'border-border/50 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                  }`}
+                >
+                  {c === 'KES' ? '🇰🇪 KES' : '🇳🇬 NGN'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Method Type */}
+          <div>
+            <label className="block text-xs font-semibold text-muted-foreground mb-2">Payment Type</label>
+            <div className="grid grid-cols-2 gap-2">
+              {METHOD_CONFIG[formCurrency].methods.map(m => (
+                <button
+                  key={m.type}
+                  type="button"
+                  onClick={() => switchType(m.type)}
+                  className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm border transition-all ${
+                    formType === m.type
+                      ? 'bg-primary/10 text-primary border-primary/30 font-semibold'
+                      : 'border-border/50 text-muted-foreground hover:border-primary/20 hover:text-foreground'
+                  }`}
+                >
+                  {METHOD_ICON[m.type]}
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Dynamic Fields */}
+          <div className="space-y-3">
+            {currentFields.map(field => (
+              <div key={field.key}>
+                <label className="block text-xs font-semibold text-muted-foreground mb-1">{field.label}</label>
+                <input
+                  type="text"
+                  value={formDetails[field.key] ?? ''}
+                  onChange={e => setFormDetails(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  placeholder={field.placeholder}
+                  className="w-full bg-background/60 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/60 transition-colors placeholder-muted-foreground"
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Active Toggle */}
+          <div className="flex items-center justify-between rounded-xl px-4 py-3" style={{ background: 'hsl(var(--background) / 0.4)', border: '1px solid hsl(var(--border) / 0.3)' }}>
+            <div>
+              <p className="text-sm font-semibold">Set as Active</p>
+              <p className="text-xs text-muted-foreground">AI will use this when user requests payment info</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFormActive(v => !v)}
+              className={`w-11 h-6 rounded-full transition-colors duration-200 flex items-center px-0.5 ${formActive ? 'bg-emerald-500' : 'bg-muted'}`}
+            >
+              <div className={`h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${formActive ? 'translate-x-5' : 'translate-x-0'}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-4 flex gap-2" style={{ borderTop: '1px solid hsl(var(--border) / 0.3)' }}>
+          <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="flex-1 rounded-xl gap-2"
+            onClick={handleSave}
+            disabled={!allFilled || saving}
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            {editing ? 'Save Changes' : 'Add Method'}
+          </Button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  ) : null
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium animate-fade-in-up ${
-          toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
-        }`}>
-          {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      {/* Toast — also via portal */}
+      {mounted && toast && createPortal(
+        <div className={`fixed top-4 right-4 flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl text-sm font-medium animate-fade-in-up ${toast.ok ? 'bg-emerald-500' : 'bg-rose-500'} text-white`} style={{ zIndex: 10000 }}>
+          {toast.ok ? <CheckCircle2 className="h-4 w-4 flex-shrink-0" /> : <AlertCircle className="h-4 w-4 flex-shrink-0" />}
           {toast.msg}
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Header */}
+      {/* Page Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-border/40 bg-background/30 backdrop-blur-md flex-shrink-0">
         <div>
           <h1 className="text-lg font-bold">Payment Methods</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Manage bank accounts & wallets the AI will share with users</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage accounts the AI shares with users</p>
         </div>
-        <Button
-          size="sm"
-          onClick={openCreate}
-          className="gap-1.5 rounded-full"
-        >
+        <Button size="sm" onClick={openAdd} className="gap-1.5 rounded-full">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Add Method</span>
         </Button>
@@ -216,14 +339,12 @@ export default function PaymentMethodsPage() {
 
       {/* Currency Tabs */}
       <div className="flex gap-1 px-4 py-3 border-b border-border/20 bg-background/20 flex-shrink-0">
-        {(Object.keys(METHOD_CONFIG) as Currency[]).map(c => (
+        {(['KES', 'NGN'] as Currency[]).map(c => (
           <button
             key={c}
             onClick={() => setActiveCurrency(c)}
             className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-              activeCurrency === c
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
+              activeCurrency === c ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-accent/30'
             }`}
           >
             {c === 'KES' ? '🇰🇪 KES' : '🇳🇬 NGN'}
@@ -231,88 +352,70 @@ export default function PaymentMethodsPage() {
         ))}
       </div>
 
-      {/* Content */}
+      {/* Content List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {loading ? (
-          <div className="flex flex-col gap-3">
-            {[1,2,3].map(i => (
-              <div key={i} className="h-20 rounded-2xl bg-muted animate-pulse" />
-            ))}
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-24 rounded-2xl bg-muted animate-pulse" />)}
           </div>
-        ) : filteredMethods.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <CreditCard className="h-8 w-8 text-primary/40" />
+              <CreditCard className="h-8 w-8 text-primary/30" />
             </div>
-            <div className="text-center">
-              <p className="font-semibold text-sm">No {activeCurrency} payment methods yet</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Click &ldquo;Add Method&rdquo; to add one</p>
+            <div>
+              <p className="font-semibold text-sm">No {activeCurrency} methods yet</p>
+              <p className="text-xs text-muted-foreground mt-1">Tap &ldquo;Add Method&rdquo; to get started</p>
             </div>
+            <Button size="sm" onClick={openAdd} className="gap-1.5 rounded-full mt-2">
+              <Plus className="h-4 w-4" /> Add Method
+            </Button>
           </div>
         ) : (
-          filteredMethods.map(m => (
+          filtered.map(m => (
             <div
               key={m.id}
-              className={`group rounded-2xl border p-4 bg-card/50 backdrop-blur-sm transition-all duration-200 ${
-                m.is_active ? 'border-emerald-500/30 shadow-sm shadow-emerald-500/5' : 'border-border/40'
+              className={`rounded-2xl border p-4 bg-card/60 backdrop-blur-sm transition-all ${
+                m.is_active ? 'border-emerald-500/40 shadow-sm shadow-emerald-500/10' : 'border-border/40'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div className={`h-9 w-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   m.is_active ? 'bg-emerald-500/15 text-emerald-500' : 'bg-muted text-muted-foreground'
                 }`}>
-                  {METHOD_ICONS[m.method_type]}
+                  {METHOD_ICON[m.method_type]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-semibold text-sm">{METHOD_LABELS[m.method_type]}</span>
+                    <span className="font-semibold text-sm">{METHOD_LABEL[m.method_type]}</span>
                     {m.is_active && (
                       <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-500 rounded-full px-2 py-0.5">ACTIVE</span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground truncate">{getMethodSummary(m)}</p>
+                  <p className="text-xs text-muted-foreground truncate">{getSummary(m)}</p>
                 </div>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => handleToggleActive(m)}
-                    className="p-1.5 rounded-lg hover:bg-accent/30 transition-colors"
-                    title={m.is_active ? 'Deactivate' : 'Activate'}
-                  >
-                    {m.is_active
-                      ? <ToggleRight className="h-5 w-5 text-emerald-500" />
-                      : <ToggleLeft className="h-5 w-5 text-muted-foreground" />
-                    }
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button onClick={() => handleToggle(m)} className="p-1.5 rounded-lg hover:bg-accent/30 transition-colors" title={m.is_active ? 'Deactivate' : 'Activate'}>
+                    {m.is_active ? <ToggleRight className="h-5 w-5 text-emerald-500" /> : <ToggleLeft className="h-5 w-5 text-muted-foreground" />}
                   </button>
-                  <button
-                    onClick={() => openEdit(m)}
-                    className="p-1.5 rounded-lg hover:bg-accent/30 text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <button onClick={() => openEdit(m)} className="p-1.5 rounded-lg hover:bg-accent/30 text-muted-foreground hover:text-foreground transition-colors">
                     <Pencil className="h-4 w-4" />
                   </button>
-                  {deleteConfirm === m.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(m.id)}
-                        className="px-2 py-1 text-[10px] font-bold bg-rose-500 text-white rounded-lg"
-                      >Delete</button>
-                      <button
-                        onClick={() => setDeleteConfirm(null)}
-                        className="px-2 py-1 text-[10px] bg-muted rounded-lg"
-                      >No</button>
+                  {delConfirm === m.id ? (
+                    <div className="flex gap-1 ml-1">
+                      <button onClick={() => handleDelete(m.id)} className="px-2 py-1 text-[10px] font-bold bg-rose-500 text-white rounded-lg">Yes</button>
+                      <button onClick={() => setDelConfirm(null)} className="px-2 py-1 text-[10px] bg-muted rounded-lg">No</button>
                     </div>
                   ) : (
-                    <button
-                      onClick={() => setDeleteConfirm(m.id)}
-                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors"
-                    >
+                    <button onClick={() => setDelConfirm(m.id)} className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted-foreground hover:text-rose-500 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Details breakdown */}
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              {/* Field breakdown */}
+              <div className="mt-3 grid grid-cols-2 gap-1.5">
                 {Object.entries(m.details).map(([k, v]) => (
                   <div key={k} className="bg-background/40 rounded-lg px-2.5 py-1.5">
                     <p className="text-[10px] text-muted-foreground capitalize">{k.replace(/_/g, ' ')}</p>
@@ -325,109 +428,8 @@ export default function PaymentMethodsPage() {
         )}
       </div>
 
-      {/* Add/Edit Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden animate-fade-in-up max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
-              <h2 className="font-bold text-base">{editingMethod ? 'Edit Payment Method' : 'Add Payment Method'}</h2>
-              <button onClick={() => setShowForm(false)} className="p-1.5 rounded-full hover:bg-accent/30 transition-colors">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-5 space-y-4">
-              {/* Currency */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Currency</label>
-                <div className="flex gap-2">
-                  {(Object.keys(METHOD_CONFIG) as Currency[]).map(c => (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        setFormCurrency(c)
-                        const first = METHOD_CONFIG[c].methods[0]
-                        setFormMethodType(first.type)
-                        setFormDetails({})
-                      }}
-                      className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                        formCurrency === c ? 'bg-primary text-primary-foreground border-primary' : 'border-border/50 hover:border-primary/30'
-                      }`}
-                    >
-                      {c === 'KES' ? '🇰🇪 KES' : '🇳🇬 NGN'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Method Type */}
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Payment Type</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {METHOD_CONFIG[formCurrency].methods.map(m => (
-                    <button
-                      key={m.type}
-                      onClick={() => { setFormMethodType(m.type); setFormDetails({}) }}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm border transition-all ${
-                        formMethodType === m.type ? 'bg-primary/10 text-primary border-primary/30 font-semibold' : 'border-border/50 hover:border-primary/20 text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {m.icon}
-                      {m.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Dynamic Fields */}
-              <div className="space-y-3">
-                {currentFields.map(field => (
-                  <div key={field.key}>
-                    <label className="block text-xs font-semibold text-muted-foreground mb-1">{field.label}</label>
-                    <input
-                      type="text"
-                      value={formDetails[field.key] || ''}
-                      onChange={e => setFormDetails(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      placeholder={field.placeholder}
-                      className="w-full bg-background/60 border border-border/50 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-primary/50 transition-colors placeholder-muted-foreground"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Active Toggle */}
-              <div className="flex items-center justify-between rounded-xl bg-background/40 border border-border/30 px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold">Set as Active</p>
-                  <p className="text-xs text-muted-foreground">AI will share this account when user requests payment</p>
-                </div>
-                <button
-                  onClick={() => setFormActive(!formActive)}
-                  className={`w-11 h-6 rounded-full transition-all duration-200 ${formActive ? 'bg-emerald-500' : 'bg-muted'}`}
-                >
-                  <div className={`h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${formActive ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-5 py-4 border-t border-border/30 flex gap-2">
-              <Button variant="outline" className="flex-1 rounded-xl" onClick={() => setShowForm(false)}>
-                Cancel
-              </Button>
-              <Button
-                className="flex-1 rounded-xl gap-2"
-                onClick={handleSave}
-                disabled={saving || currentFields.some(f => !formDetails[f.key]?.trim())}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {editingMethod ? 'Update' : 'Add Method'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal rendered via portal — bypasses all CSS overflow/stacking constraints */}
+      {modal}
     </div>
   )
 }

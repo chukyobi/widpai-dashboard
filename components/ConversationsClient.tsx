@@ -174,6 +174,12 @@ export default function ConversationsClient() {
   }, [showEmojiPicker])
 
   useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [])
+
+  useEffect(() => {
     const proto = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'
 
     // Load all critical state in parallel BEFORE showing UI
@@ -223,6 +229,12 @@ export default function ConversationsClient() {
       } catch (e) {}
     }
 
+    const showNotification = (title: string, body: string) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/favicon.ico' })
+      }
+    }
+
     globalWs.onmessage = e => {
       try {
         const data = JSON.parse(e.data)
@@ -244,6 +256,7 @@ export default function ConversationsClient() {
           // Only increment unread if NOT currently in that session
           if (selectedRef.current !== data.sessionId) {
             playPop()
+            showNotification(`New message from ${data.sessionId}`, data.last_message)
             setUnreadCounts(prev => ({ ...prev, [data.sessionId]: (prev[data.sessionId] || 0) + 1 }))
           }
         }

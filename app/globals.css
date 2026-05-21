@@ -74,6 +74,14 @@
     @apply bg-card/60 backdrop-blur-xl border border-border/50 shadow-xl shadow-black/5;
   }
   
+  .scrollbar-none {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;  /* Chrome, Safari and Opera */
+  }
+  
   .animate-in {
     animation: animateIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }

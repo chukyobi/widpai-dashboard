@@ -154,10 +154,24 @@ export default function ConversationsClient() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const cameraInputRef = useRef<HTMLInputElement>(null)
   const selectedRef = useRef<string | null>(null)
+  const emojiPickerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     selectedRef.current = selected
   }, [selected])
+
+  // Emoji picker click-outside logic
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target as Node)) {
+        setShowEmojiPicker(false)
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showEmojiPicker])
 
   useEffect(() => {
     const proto = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'wss' : 'ws'

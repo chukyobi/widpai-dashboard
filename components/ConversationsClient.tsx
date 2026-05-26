@@ -310,8 +310,7 @@ export default function ConversationsClient() {
           // Client-side filter: mirror the same rules as the REST API
           const lc = (msg.content || '').toLowerCase()
           const isSystemMsg =
-            lc.includes('[media uploaded]') ||
-            lc.includes('[file uploaded]') ||
+            (lc.match(/\[.*?\]\s*type:/) && !lc.includes('cdn url: https')) ||
             lc.includes('transaction check result') ||
             (msg.content || '').toUpperCase().includes('SKIP_RESPONSE') ||
             (!msg.content && !msg.media_url)

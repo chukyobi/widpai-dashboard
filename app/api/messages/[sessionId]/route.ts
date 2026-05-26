@@ -65,18 +65,18 @@ export async function GET(
             image: 'image', video: 'video', document: 'document',
             audio: 'audio', voice: 'audio', sticker: 'sticker'
           }
-          // Match either [File Uploaded] or [Media Uploaded] with a Type and a valid CDN URL
-          const uploadedMatch = content.match(/\[(File|Media) Uploaded\]\s*Type:\s*(\w+)[^|]*\|\s*CDN URL:\s*(https?:\/\/[^\s|]+)/i)
+          // Match [File Uploaded], [Media Uploaded], or [User Sent a Non-Financial Media File] etc., followed by Type and a valid CDN URL
+          const uploadedMatch = content.match(/\[.*?\]\s*Type:\s*(\w+)[^|]*\|\s*CDN URL:\s*(https?:\/\/[^\s|]+)/i)
           if (uploadedMatch) {
-            const extractedType = typeMap[uploadedMatch[2].toLowerCase()] || 'document'
-            media_url = uploadedMatch[3]
+            const extractedType = typeMap[uploadedMatch[1].toLowerCase()] || 'document'
+            media_url = uploadedMatch[2]
             media_type = extractedType
             content = ''
           }
         }
 
         // Generic fallback: if media_url is already populated and content is a placeholder
-        if (media_url && media_type && (content.startsWith('[File Uploaded]') || content.startsWith('[Media Uploaded]') || media_type === 'sticker')) {
+        if (media_url && media_type && (content.startsWith('[') || media_type === 'sticker')) {
           content = ''
         }
 
@@ -101,10 +101,10 @@ export async function GET(
           if (msg.content.trim().startsWith('Called ')) return false
         }
         const lc = (msg.content || '').toLowerCase()
-        // Exclude [Media Uploaded] / [File Uploaded] entries that have NO valid media_url
-        // (i.e. the parser couldn't extract a real CDN URL — CDN URL was None or missing)
+        // Exclude any media placeholder entry (e.g. [Media Uploaded], [User Sent a Non-Financial...]) 
+        // that has NO valid media_url (i.e. CDN URL was None or missing)
         if (
-          (lc.includes('[media uploaded]') || lc.includes('[file uploaded]')) &&
+          lc.match(/\[.*?\]\s*type:/) &&
           !msg.media_url
         ) return false
         // Exclude Transaction Check Result metadata lines
@@ -138,8 +138,9 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid message structure' }, { status: 400 })
     }
 
-    // Ignore system media uploaded metadata messages from broadcasts and unread increments
-    if (message.content && message.content.toLowerCase().includes('[media uploaded]')) {
+    // Ignore system media metadata messages from broadcasts and unread increments IF they have no valid URL
+    const lc = (message.content || '').toLowerCase()
+    if (lc.match(/\[.*?\]\s*type:/) && !lc.includes('cdn url: https')) {
       return NextResponse.json({ success: true, ignored: true })
     }
 

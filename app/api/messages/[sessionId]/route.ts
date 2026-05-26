@@ -44,62 +44,39 @@ export async function GET(
         let media_type = row.media_type || null
 
         // 1. Check for Voice Message Transcribed pattern
-        if (content.includes('[Voice Message Transcribed]:') && content.includes('Permanent CDN Storage URL:')) {
+        if (content.includes('[Voice Message Transcribed]:')) {
           const urlMatch = content.match(/Permanent CDN Storage URL:\s*(https?:\/\/[^\s|]+)/)
           if (urlMatch) {
-            media_url = urlMatch[1]
-            media_type = 'audio'
-            content = '' // Clear text content so it only shows the playable player
-          }
-        } 
-        // 2. Check for File Uploaded pattern (image)
-        else if (content.includes('[File Uploaded] Type: image') && content.includes('CDN URL:')) {
-          const urlMatch = content.match(/CDN URL:\s*(https?:\/\/[^\s|]+)/)
-          if (urlMatch) {
-            media_url = urlMatch[1]
-            media_type = 'image'
-            content = '' // Clear text content so it only shows the image
-          }
-        }
-        // 3. Check for File Uploaded pattern (video)
-        else if (content.includes('[File Uploaded] Type: video') && content.includes('CDN URL:')) {
-          const urlMatch = content.match(/CDN URL:\s*(https?:\/\/[^\s|]+)/)
-          if (urlMatch) {
-            media_url = urlMatch[1]
-            media_type = 'video'
-            content = ''
-          }
-        }
-        // 4. Check for File Uploaded pattern (document/pdf)
-        else if (content.includes('[File Uploaded] Type: document') && content.includes('CDN URL:')) {
-          const urlMatch = content.match(/CDN URL:\s*(https?:\/\/[^\s|]+)/)
-          if (urlMatch) {
-            media_url = urlMatch[1]
-            media_type = 'document'
-            content = ''
-          }
-        }
-        // 5. Check for File Uploaded pattern (audio/voice)
-        else if ((content.includes('[File Uploaded] Type: audio') || content.includes('[File Uploaded] Type: voice')) && content.includes('CDN URL:')) {
-          const urlMatch = content.match(/CDN URL:\s*(https?:\/\/[^\s|]+)/)
-          if (urlMatch) {
+            // Has a valid CDN URL → render as playable audio
             media_url = urlMatch[1]
             media_type = 'audio'
             content = ''
+          } else {
+            // No valid CDN URL → strip the prefix, show transcription text only
+            const textMatch = content.match(/\[Voice Message Transcribed\]:\s*"?([\s\S]+?)"?\s*$/)
+            content = textMatch ? textMatch[1].trim() : content.replace(/\[Voice Message Transcribed\]:\s*/i, '').trim()
+            media_url = null
+            media_type = null
           }
         }
-        // 6. Check for File Uploaded pattern (sticker)
-        else if (content.includes('[File Uploaded] Type: sticker') && content.includes('CDN URL:')) {
-          const urlMatch = content.match(/CDN URL:\s*(https?:\/\/[^\s|]+)/)
-          if (urlMatch) {
-            media_url = urlMatch[1]
-            media_type = 'sticker'
+        // Helper: extract CDN URL from both [File Uploaded] and [Media Uploaded] content strings
+        else {
+          const typeMap: Record<string, string> = {
+            image: 'image', video: 'video', document: 'document',
+            audio: 'audio', voice: 'audio', sticker: 'sticker'
+          }
+          // Match either [File Uploaded] or [Media Uploaded] with a Type and a valid CDN URL
+          const uploadedMatch = content.match(/\[(File|Media) Uploaded\]\s*Type:\s*(\w+)[^|]*\|\s*CDN URL:\s*(https?:\/\/[^\s|]+)/i)
+          if (uploadedMatch) {
+            const extractedType = typeMap[uploadedMatch[2].toLowerCase()] || 'document'
+            media_url = uploadedMatch[3]
+            media_type = extractedType
             content = ''
           }
         }
 
         // Generic fallback: if media_url is already populated and content is a placeholder
-        if (media_url && media_type && (content.startsWith('[File Uploaded]') || media_type === 'sticker')) {
+        if (media_url && media_type && (content.startsWith('[File Uploaded]') || content.startsWith('[Media Uploaded]') || media_type === 'sticker')) {
           content = ''
         }
 
@@ -123,6 +100,19 @@ export async function GET(
           if (msg.content.trim().startsWith('Calling ')) return false
           if (msg.content.trim().startsWith('Called ')) return false
         }
+        const lc = (msg.content || '').toLowerCase()
+        // Exclude [Media Uploaded] / [File Uploaded] entries that have NO valid media_url
+        // (i.e. the parser couldn't extract a real CDN URL — CDN URL was None or missing)
+        if (
+          (lc.includes('[media uploaded]') || lc.includes('[file uploaded]')) &&
+          !msg.media_url
+        ) return false
+        // Exclude Transaction Check Result metadata lines
+        if (lc.includes('transaction check result')) return false
+        // Exclude SKIP_RESPONSE messages
+        if (msg.content && msg.content.toUpperCase().includes('SKIP_RESPONSE')) return false
+        // Exclude empty messages with no content and no media
+        if (!msg.content && !msg.media_url) return false
         return true
       })
 
@@ -146,6 +136,16 @@ export async function POST(
 
     if (!message || !message.role) {
       return NextResponse.json({ error: 'Invalid message structure' }, { status: 400 })
+    }
+
+    // Ignore system media uploaded metadata messages from broadcasts and unread increments
+    if (message.content && message.content.toLowerCase().includes('[media uploaded]')) {
+      return NextResponse.json({ success: true, ignored: true })
+    }
+
+    // Ignore SKIP_RESPONSE messages from broadcasts and unread increments
+    if (message.content && message.content.toUpperCase().includes('SKIP_RESPONSE')) {
+      return NextResponse.json({ success: true, ignored: true })
     }
 
     // Increment unread_count if it's a message from the user

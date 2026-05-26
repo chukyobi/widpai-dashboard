@@ -306,13 +306,24 @@ export default function ConversationsClient() {
       try {
         const data = JSON.parse(e.data)
         if (data.type === 'new_message') {
+          const msg = data.message
+          // Client-side filter: mirror the same rules as the REST API
+          const lc = (msg.content || '').toLowerCase()
+          const isSystemMsg =
+            lc.includes('[media uploaded]') ||
+            lc.includes('[file uploaded]') ||
+            lc.includes('transaction check result') ||
+            (msg.content || '').toUpperCase().includes('SKIP_RESPONSE') ||
+            (!msg.content && !msg.media_url)
+          if (isSystemMsg) return
+
           setMessages(prev => {
             const isDuplicate = prev.some(m =>
-              m.content === data.message.content &&
-              Math.abs(new Date(m.created_at).getTime() - new Date(data.message.created_at).getTime()) < 10000
+              m.content === msg.content &&
+              Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 10000
             )
             if (isDuplicate) return prev
-            return [...prev, data.message]
+            return [...prev, msg]
           })
           setUnreadCounts(prev => ({ ...prev, [id]: 0 }))
         }

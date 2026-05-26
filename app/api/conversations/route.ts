@@ -28,6 +28,8 @@ export async function GET() {
           WHERE c2.session_id = c.session_id
             AND message->>'type' IN ('human', 'ai', 'bot')
             AND NOT (message->>'type' = 'ai' AND (message->>'content' LIKE 'Calling %' OR message->>'content' LIKE 'Called %'))
+            AND NOT (LOWER(COALESCE(message->>'content', '')) LIKE '%[media uploaded]%')
+            AND NOT (UPPER(COALESCE(message->>'content', '')) LIKE '%SKIP_RESPONSE%')
           ORDER BY created_at DESC LIMIT 1
         ) as last_message
       FROM chat_history c

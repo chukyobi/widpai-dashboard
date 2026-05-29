@@ -10,16 +10,30 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setPending(true)
     const formData = new FormData(e.currentTarget)
-    const result = await signupAction(formData)
-    if (result?.error) { 
-      setError(result.error)
-      setPending(false) 
-    }
+    
+    import('react').then(({ startTransition }) => {
+      startTransition(async () => {
+        try {
+          const result = await signupAction(formData)
+          if (result?.error) { 
+            setError(result.error)
+            setPending(false) 
+          }
+        } catch (e) {
+          if (e && typeof e === 'object' && 'message' in e && (e as any).message === 'NEXT_REDIRECT') {
+            throw e;
+          }
+          console.error(e)
+          setError("An unexpected error occurred.")
+          setPending(false)
+        }
+      })
+    })
   }
 
   return (
@@ -31,7 +45,7 @@ export default function SignupPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} method="POST" className="space-y-4">
         <div className="space-y-2 group">
           <label className="text-sm font-medium leading-none text-foreground/80 group-focus-within:text-primary transition-colors" htmlFor="name">
             Full Name

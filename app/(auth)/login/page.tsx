@@ -10,13 +10,33 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setError(null)
     setPending(true)
     const formData = new FormData(e.currentTarget)
-    const result = await loginAction(formData)
-    if (result?.error) { setError(result.error); setPending(false) }
+    
+    // Server actions that use redirect() must be wrapped in a transition 
+    // when called from an event handler, otherwise the redirect fails.
+    import('react').then(({ startTransition }) => {
+      startTransition(async () => {
+        try {
+          const result = await loginAction(formData)
+          if (result?.error) { 
+            setError(result.error)
+            setPending(false) 
+          }
+        } catch (e) {
+          // Ignore redirect errors, throw everything else
+          if (e && typeof e === 'object' && 'message' in e && (e as any).message === 'NEXT_REDIRECT') {
+            throw e;
+          }
+          console.error(e)
+          setError("An unexpected error occurred.")
+          setPending(false)
+        }
+      })
+    })
   }
 
   return (
@@ -26,7 +46,7 @@ export default function LoginPage() {
         <p className="text-sm text-muted-foreground">Enter your credentials to access the dashboard</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} method="POST" className="space-y-4">
         <div className="space-y-2 group">
           <label className="text-sm font-medium text-foreground/80 group-focus-within:text-primary transition-colors" htmlFor="email">
             Email address

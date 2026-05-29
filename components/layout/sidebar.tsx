@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BarChart3, MessageSquare, Shield, LogOut, CreditCard } from "lucide-react"
+import { BarChart3, MessageSquare, Shield, LogOut, CreditCard, FileText } from "lucide-react"
 import { logoutAction } from "@/app/(auth)/actions"
 
 export function Sidebar() {
@@ -24,6 +24,10 @@ export function Sidebar() {
             <Link href="/conversations" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95">
               <MessageSquare className="h-4 w-4 flex-shrink-0" />
               Conversations
+            </Link>
+            <Link href="/transactions" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95">
+              <FileText className="h-4 w-4 flex-shrink-0" />
+              Transactions
             </Link>
             <Link href="/payment-methods" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95">
               <CreditCard className="h-4 w-4 flex-shrink-0" />
@@ -51,6 +55,10 @@ export function Sidebar() {
         <Link href="/conversations" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <MessageSquare className="h-5 w-5" />
           <span className="text-[10px] font-medium">Chats</span>
+        </Link>
+        <Link href="/transactions" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+          <FileText className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Txns</span>
         </Link>
         <Link href="/payment-methods" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <CreditCard className="h-5 w-5" />

@@ -25,6 +25,7 @@ export default function TransactionsPage() {
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [showFilters, setShowFilters] = useState(false)
 
   useEffect(() => {
     fetchTransactions()
@@ -76,7 +77,7 @@ export default function TransactionsPage() {
         matches = false;
       }
 
-      // Date Filters (convert to start/end of day local time for accurate comparison)
+      // Date Filters
       const txDate = new Date(tx.created_at).getTime()
       
       if (startDate) {
@@ -95,7 +96,6 @@ export default function TransactionsPage() {
     })
   }, [transactions, startDate, endDate, statusFilter])
 
-  // Compliance-ready CSV Export
   const handleExportCSV = () => {
     const headers = [
       'Transaction ID', 
@@ -118,8 +118,8 @@ export default function TransactionsPage() {
         tx.amount_detected || 'Not Detected',
         tx.status,
         tx.receipt_url || 'N/A',
-        d.toISOString() // Audit trail requirement
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','); // Escape quotes for CSV format
+        d.toISOString()
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(',');
     });
 
     const csvContent = [headers.join(','), ...rows].join('\n');
@@ -143,64 +143,80 @@ export default function TransactionsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="flex justify-center items-center h-[70vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto pb-[80px] md:pb-6">
+      {/* Header Area */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-card/40 border border-border/40 p-5 rounded-2xl backdrop-blur-md">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Transactions
+          </h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             Review, approve, and audit your payment pipeline.
           </p>
         </div>
         
-        <Button 
-          onClick={handleExportCSV}
-          className="bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all"
-          disabled={filteredTransactions.length === 0}
-        >
-          <Download className="w-4 h-4 mr-2" />
-          Export to CSV
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button 
+            variant="outline"
+            className="flex-1 md:flex-none md:hidden"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filters
+          </Button>
+          <Button 
+            onClick={handleExportCSV}
+            className="flex-1 md:flex-none bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+            disabled={filteredTransactions.length === 0}
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
-      {/* Audit & Compliance Filter Bar */}
-      <div className="bg-card border border-border/50 rounded-xl p-4 shadow-sm flex flex-col md:flex-row items-end gap-4">
-        <div className="flex items-center gap-2 w-full md:w-auto text-sm font-medium text-muted-foreground mb-1 md:mb-0">
-          <Filter className="w-4 h-4" /> Filters:
+      {/* Filter Bar */}
+      <div className={`
+        ${showFilters ? 'flex' : 'hidden md:flex'} 
+        flex-col md:flex-row items-end gap-4 bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-5 shadow-sm transition-all
+      `}>
+        <div className="flex items-center gap-2 w-full md:w-auto text-sm font-semibold text-foreground/80 mb-1 md:mb-0">
+          <Filter className="w-4 h-4 text-primary" /> Audit Filters:
         </div>
         
         <div className="flex flex-col w-full md:w-auto">
-          <label className="text-xs font-medium text-muted-foreground mb-1">Start Date</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Start Date</label>
           <Input 
             type="date" 
             value={startDate} 
             onChange={(e) => setStartDate(e.target.value)}
-            className="h-9 bg-background/50"
+            className="h-10 bg-background border-border/50 focus:border-primary/50 transition-colors"
           />
         </div>
 
         <div className="flex flex-col w-full md:w-auto">
-          <label className="text-xs font-medium text-muted-foreground mb-1">End Date</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">End Date</label>
           <Input 
             type="date" 
             value={endDate} 
             onChange={(e) => setEndDate(e.target.value)}
-            className="h-9 bg-background/50"
+            className="h-10 bg-background border-border/50 focus:border-primary/50 transition-colors"
           />
         </div>
 
         <div className="flex flex-col w-full md:w-auto">
-          <label className="text-xs font-medium text-muted-foreground mb-1">Status</label>
+          <label className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Status</label>
           <select 
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-9 w-full md:w-[150px] rounded-md border border-input bg-background/50 px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-10 w-full md:w-[160px] rounded-lg border border-border/50 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
           >
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending</option>
@@ -210,50 +226,53 @@ export default function TransactionsPage() {
         </div>
 
         {(startDate || endDate || statusFilter !== 'ALL') && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 text-muted-foreground">
-            Clear
+          <Button variant="ghost" onClick={clearFilters} className="h-10 w-full md:w-auto text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors">
+            Clear Filters
           </Button>
         )}
       </div>
 
-      {/* Data Table */}
-      <div className="bg-card border border-border/50 rounded-xl overflow-hidden shadow-sm">
+      {/* DESKTOP TABLE VIEW */}
+      <div className="hidden lg:block bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-muted-foreground uppercase bg-background/50 border-b border-border/50">
               <tr>
-                <th className="px-6 py-4 font-medium">Date / Time</th>
-                <th className="px-6 py-4 font-medium">Customer (WhatsApp)</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">Date / Time</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">Customer Info</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">Status</th>
+                <th className="px-6 py-4 font-semibold tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-muted-foreground">
-                    {transactions.length === 0 ? "No transactions found in database." : "No transactions match your current filters."}
+                  <td colSpan={4} className="px-6 py-16 text-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <Filter className="h-8 w-8 text-muted-foreground/30" />
+                      <p>{transactions.length === 0 ? "No transactions found in database." : "No transactions match your current filters."}</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 filteredTransactions.map((tx) => (
                   <tr key={tx.id} className="hover:bg-accent/10 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-foreground">
-                        {new Date(tx.created_at).toLocaleDateString()}
+                      <div className="font-semibold text-foreground">
+                        {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground mt-0.5 font-medium">
                         {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium">{tx.whatsapp_number}</div>
+                      <div className="font-semibold">{tx.whatsapp_number}</div>
                       {tx.amount_detected && (
-                        <div className="text-xs text-muted-foreground">Amount: {tx.amount_detected}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 font-medium">Amount: <span className="text-foreground/80">{tx.amount_detected}</span></div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide uppercase border ${
                         tx.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
                         tx.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
                         'bg-rose-500/10 text-rose-600 border-rose-500/20'
@@ -264,11 +283,11 @@ export default function TransactionsPage() {
                         {tx.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-right flex items-center justify-end gap-2.5">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-8 gap-1.5 text-xs font-medium"
+                        className="h-8 gap-1.5 text-xs font-semibold rounded-lg hover:bg-accent/50"
                         onClick={() => setLightboxUrl(tx.receipt_url)}
                         disabled={!tx.receipt_url}
                       >
@@ -280,7 +299,7 @@ export default function TransactionsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                          className="h-8 gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200 rounded-lg"
                         >
                           <MessageSquare className="w-3.5 h-3.5" />
                           Chat
@@ -292,7 +311,7 @@ export default function TransactionsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 gap-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
+                            className="h-8 gap-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200 rounded-lg"
                             disabled={updatingId === tx.id}
                             onClick={() => handleUpdateStatus(tx.id, 'DISPUTED')}
                           >
@@ -300,7 +319,7 @@ export default function TransactionsPage() {
                           </Button>
                           <Button
                             size="sm"
-                            className="h-8 gap-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white"
+                            className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                             disabled={updatingId === tx.id}
                             onClick={() => handleUpdateStatus(tx.id, 'COMPLETED')}
                           >
@@ -317,14 +336,97 @@ export default function TransactionsPage() {
         </div>
       </div>
 
+      {/* MOBILE / TABLET CARD VIEW */}
+      <div className="lg:hidden grid gap-4 grid-cols-1 md:grid-cols-2">
+        {filteredTransactions.length === 0 ? (
+          <div className="col-span-full py-16 text-center text-muted-foreground bg-card/40 border border-border/40 rounded-2xl">
+            <Filter className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+            <p>No transactions found.</p>
+          </div>
+        ) : (
+          filteredTransactions.map((tx) => (
+            <div key={tx.id} className="bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-5 shadow-sm flex flex-col">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <div className="font-bold text-foreground text-lg">{tx.whatsapp_number}</div>
+                  <div className="text-xs font-medium text-muted-foreground mt-0.5">
+                    {new Date(tx.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at {new Date(tx.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase border ${
+                  tx.status === 'PENDING' ? 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20' :
+                  tx.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' :
+                  'bg-rose-500/10 text-rose-600 border-rose-500/20'
+                }`}>
+                  {tx.status}
+                </span>
+              </div>
+              
+              {tx.amount_detected && (
+                <div className="mb-4 text-sm font-medium bg-background/50 px-3 py-2 rounded-lg border border-border/40">
+                  <span className="text-muted-foreground mr-2">Amount Detected:</span>
+                  <span className="text-foreground">{tx.amount_detected}</span>
+                </div>
+              )}
+
+              <div className="mt-auto pt-4 grid grid-cols-2 gap-2 border-t border-border/30">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full gap-1.5 text-xs font-semibold rounded-lg"
+                  onClick={() => setLightboxUrl(tx.receipt_url)}
+                  disabled={!tx.receipt_url}
+                >
+                  <ImageIcon className="w-3.5 h-3.5" />
+                  Receipt
+                </Button>
+                
+                <Link href="/conversations" className="w-full">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1.5 text-xs font-semibold text-blue-600 border-blue-200 rounded-lg"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    Chat
+                  </Button>
+                </Link>
+
+                {tx.status === 'PENDING' && (
+                  <div className="col-span-2 grid grid-cols-2 gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full gap-1.5 text-xs font-semibold text-rose-600 border-rose-200 rounded-lg"
+                      disabled={updatingId === tx.id}
+                      onClick={() => handleUpdateStatus(tx.id, 'DISPUTED')}
+                    >
+                      Dispute
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="w-full gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
+                      disabled={updatingId === tx.id}
+                      onClick={() => handleUpdateStatus(tx.id, 'COMPLETED')}
+                    >
+                      {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
       {/* Lightbox for Receipt */}
       {lightboxUrl && (
         <div 
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200"
           onClick={() => setLightboxUrl(null)}
         >
           <button 
-            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors"
+            className="absolute top-4 md:top-6 right-4 md:right-6 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all shadow-lg backdrop-blur-md z-50"
             onClick={() => setLightboxUrl(null)}
           >
             <X className="w-6 h-6" />
@@ -333,7 +435,7 @@ export default function TransactionsPage() {
           <img 
             src={lightboxUrl} 
             alt="Transaction Receipt" 
-            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+            className="max-w-full max-h-[85vh] md:max-h-[90vh] rounded-xl shadow-2xl object-contain animate-in zoom-in-95 duration-200 ring-1 ring-white/20"
             onClick={(e) => e.stopPropagation()} 
           />
         </div>

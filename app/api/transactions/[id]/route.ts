@@ -31,14 +31,18 @@ export async function PATCH(
 
     const transaction = result.rows[0]
 
-    // Optional: Add logic to trigger n8n webhook here if needed
-    // e.g. 
-    // if (process.env.N8N_WEBHOOK_URL) {
-    //   fetch(process.env.N8N_WEBHOOK_URL, {
-    //     method: 'POST',
-    //     body: JSON.stringify(transaction)
-    //   })
-    // }
+    // Trigger n8n webhook so it can message the customer
+    if (process.env.N8N_WEBHOOK_URL) {
+      try {
+        fetch(process.env.N8N_WEBHOOK_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(transaction)
+        })
+      } catch (e) {
+        console.error("Failed to ping n8n webhook", e)
+      }
+    }
 
     return NextResponse.json({ transaction })
   } catch (error) {

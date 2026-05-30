@@ -40,6 +40,10 @@ export async function GET(
     const parsedRows = result.rows
       .map(row => {
         let content = row.content || ''
+        
+        // Strip out the n8n system context tags
+        content = content.replace(/\[System Context:.*?\]/gi, '').trim()
+
         let media_url = row.media_url || null
         let media_type = row.media_type || null
 
@@ -136,6 +140,11 @@ export async function POST(
 
     if (!message || !message.role) {
       return NextResponse.json({ error: 'Invalid message structure' }, { status: 400 })
+    }
+
+    // Strip out the n8n system context tags before broadcasting
+    if (message.content) {
+      message.content = message.content.replace(/\[System Context:.*?\]/gi, '').trim()
     }
 
     // Ignore system media metadata messages from broadcasts and unread increments IF they have no valid URL

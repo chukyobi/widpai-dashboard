@@ -364,7 +364,7 @@ export default function TransactionsPage() {
                             size="sm"
                             className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                             disabled={updatingId === tx.id}
-                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setApproveModalTxId(tx.id); }}
+                            onClick={() => setApproveModalTxId(tx.id)}
                           >
                             {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                           </Button>
@@ -443,7 +443,7 @@ export default function TransactionsPage() {
                       size="sm"
                       className="w-full gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                       disabled={updatingId === tx.id}
-                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setApproveModalTxId(tx.id); }}
+                      onClick={() => setApproveModalTxId(tx.id)}
                     >
                       {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                     </Button>
@@ -481,8 +481,11 @@ export default function TransactionsPage() {
       )}
 
       {/* Approve Modal */}
-      {approveModalTxId && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      {approveModalTxId !== null && (
+        <div 
+          className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          style={{ zIndex: 999999 }}
+        >
           <div className="bg-card border border-border/50 shadow-2xl rounded-2xl w-full max-w-md p-6 relative">
             <button 
               className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-all"

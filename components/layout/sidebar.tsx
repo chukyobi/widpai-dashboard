@@ -64,20 +64,10 @@ export function Sidebar() {
           <FileText className="h-5 w-5" />
           <span className="text-[10px] font-medium">Txns</span>
         </Link>
-        <Link href="/payment-methods" className="hidden md:flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
-          <CreditCard className="h-5 w-5" />
-          <span className="text-[10px] font-medium">Payments</span>
-        </Link>
         <Link href="/settings" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <Settings className="h-5 w-5" />
           <span className="text-[10px] font-medium">Settings</span>
         </Link>
-        <form action={logoutAction}>
-          <button type="submit" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-destructive transition-colors active:scale-95">
-            <LogOut className="h-5 w-5" />
-            <span className="text-[10px] font-medium">Logout</span>
-          </button>
-        </form>
       </nav>
     </>
   )

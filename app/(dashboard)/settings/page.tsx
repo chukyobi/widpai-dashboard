@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings, Moon, DollarSign, Loader2 } from 'lucide-react'
+import { Settings, Moon, DollarSign, Loader2, CreditCard, LogOut } from 'lucide-react'
+import Link from 'next/link'
+import { logoutAction } from '@/app/(auth)/actions'
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
@@ -116,6 +118,31 @@ export default function SettingsPage() {
               >
                 <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${noShillings ? 'translate-x-5' : 'translate-x-0'}`} />
               </button>
+            </div>
+
+            <div className="pt-6 mt-6 border-t border-border/50 space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider mb-4">Account Links</h3>
+              <Link href="/payment-methods" className="flex items-center gap-4 bg-card/40 border border-border/50 rounded-2xl p-4 hover:bg-accent/50 transition-colors shadow-sm w-full">
+                <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-500">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-medium">Payment Methods</h3>
+                  <p className="text-sm text-muted-foreground">Manage your bank and mobile money accounts</p>
+                </div>
+              </Link>
+              
+              <form action={logoutAction}>
+                <button type="submit" className="w-full flex items-center gap-4 bg-rose-500/5 border border-rose-500/20 rounded-2xl p-4 hover:bg-rose-500/10 transition-colors shadow-sm text-left">
+                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-500">
+                    <LogOut className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-rose-600">Sign Out</h3>
+                    <p className="text-sm text-rose-500/70">Securely log out of your admin account</p>
+                  </div>
+                </button>
+              </form>
             </div>
           </div>
         )}

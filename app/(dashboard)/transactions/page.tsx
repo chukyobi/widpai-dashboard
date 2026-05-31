@@ -189,7 +189,8 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto w-full">
+    <>
+    <div className="h-full overflow-y-auto w-full relative">
       <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto pb-[80px] md:pb-6">
       {/* Header Area */}
       <div className="flex flex-col gap-4 bg-card/40 border border-border/40 p-5 rounded-2xl backdrop-blur-md">
@@ -363,7 +364,7 @@ export default function TransactionsPage() {
                             size="sm"
                             className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                             disabled={updatingId === tx.id}
-                            onClick={() => setApproveModalTxId(tx.id)}
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setApproveModalTxId(tx.id); }}
                           >
                             {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                           </Button>
@@ -442,7 +443,7 @@ export default function TransactionsPage() {
                       size="sm"
                       className="w-full gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                       disabled={updatingId === tx.id}
-                      onClick={() => setApproveModalTxId(tx.id)}
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); setApproveModalTxId(tx.id); }}
                     >
                       {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                     </Button>
@@ -453,6 +454,9 @@ export default function TransactionsPage() {
           ))
         )}
       </div>
+
+      </div>
+    </div>
 
       {/* Lightbox for Receipt */}
       {lightboxUrl && (
@@ -538,8 +542,7 @@ export default function TransactionsPage() {
           </div>
         </div>
       )}
-    </div>
-    </div>
+    </>
   )
 }
 

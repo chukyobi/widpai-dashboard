@@ -76,8 +76,12 @@ export default function TransactionsPage() {
     }
   }
 
-  const submitApproval = async () => {
-    if (!approveModalTxId) return;
+  const submitApproval = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (approveModalTxId === null) return;
     
     let uploadedUrl = '';
     
@@ -92,15 +96,24 @@ export default function TransactionsPage() {
           headers: { 'x-api-key': 'widpai_upload_secret_key' },
           body: formData
         })
+        
+        if (!uploadRes.ok) {
+          throw new Error('Upload failed with status ' + uploadRes.status);
+        }
+        
         const uploadData = await uploadRes.json()
         if (uploadData.url) {
           uploadedUrl = uploadData.url;
+        } else {
+          throw new Error('Upload returned no URL');
         }
       } catch (err) {
         console.error('Upload failed', err);
-      } finally {
+        alert('Failed to upload the receipt image. Please check your connection or try a smaller image.');
         setIsUploading(false);
+        return; // Abort approval if upload fails
       }
+      setIsUploading(false);
     }
     
     await handleUpdateStatus(approveModalTxId, 'COMPLETED', uploadedUrl || undefined);

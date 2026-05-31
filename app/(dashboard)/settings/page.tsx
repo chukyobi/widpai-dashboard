@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Switch } from '@/components/ui/switch'
 import { Settings, Moon, DollarSign, Loader2 } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -91,7 +90,13 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Bot responds: "Sorry, we have closed for the day."</p>
                 </div>
               </div>
-              <Switch checked={isClosed} onCheckedChange={toggleClosed} disabled={updating} />
+              <button
+                onClick={toggleClosed}
+                disabled={updating}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${isClosed ? 'bg-primary' : 'bg-input'}`}
+              >
+                <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${isClosed ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
 
             <div className="bg-card/40 border border-border/50 rounded-2xl p-6 flex items-center justify-between shadow-sm">
@@ -104,7 +109,13 @@ export default function SettingsPage() {
                   <p className="text-sm text-muted-foreground">Bot responds: "Sorry, we don't have shillings available."</p>
                 </div>
               </div>
-              <Switch checked={noShillings} onCheckedChange={toggleNoShillings} disabled={updating} />
+              <button
+                onClick={toggleNoShillings}
+                disabled={updating}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${noShillings ? 'bg-primary' : 'bg-input'}`}
+              >
+                <span className={`pointer-events-none block h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform ${noShillings ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
             </div>
           </div>
         )}

@@ -21,6 +21,12 @@ export default function TransactionsPage() {
   const [updatingId, setUpdatingId] = useState<number | null>(null)
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   
+  // Approval Modal States
+  const [approveModalTxId, setApproveModalTxId] = useState<number | null>(null)
+  const [payoutReceiptFile, setPayoutReceiptFile] = useState<File | null>(null)
+  const [payoutReceiptPreview, setPayoutReceiptPreview] = useState<string | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  
   // Filtering States
   const [startDate, setStartDate] = useState<string>('')
   const [endDate, setEndDate] = useState<string>('')
@@ -47,13 +53,13 @@ export default function TransactionsPage() {
     }
   }
 
-  const handleUpdateStatus = async (id: number, status: 'COMPLETED' | 'DISPUTED') => {
+  const handleUpdateStatus = async (id: number, status: 'COMPLETED' | 'DISPUTED', payoutUrl?: string) => {
     try {
       setUpdatingId(id)
       const res = await fetch(`/api/transactions/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status, payout_receipt_url: payoutUrl })
       })
       if (res.ok) {
         setTransactions(prev =>
@@ -64,7 +70,40 @@ export default function TransactionsPage() {
       console.error('Failed to update transaction status', error)
     } finally {
       setUpdatingId(null)
+      setApproveModalTxId(null)
+      setPayoutReceiptFile(null)
+      setPayoutReceiptPreview(null)
     }
+  }
+
+  const submitApproval = async () => {
+    if (!approveModalTxId) return;
+    
+    let uploadedUrl = '';
+    
+    if (payoutReceiptFile) {
+      setIsUploading(true);
+      try {
+        const formData = new FormData()
+        formData.append('file', payoutReceiptFile)
+        
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          headers: { 'x-api-key': 'widpai_upload_secret_key' },
+          body: formData
+        })
+        const uploadData = await uploadRes.json()
+        if (uploadData.url) {
+          uploadedUrl = uploadData.url;
+        }
+      } catch (err) {
+        console.error('Upload failed', err);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+    
+    await handleUpdateStatus(approveModalTxId, 'COMPLETED', uploadedUrl || undefined);
   }
 
   // Derived state for filtered transactions
@@ -327,7 +366,7 @@ export default function TransactionsPage() {
                             size="sm"
                             className="h-8 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                             disabled={updatingId === tx.id}
-                            onClick={() => handleUpdateStatus(tx.id, 'COMPLETED')}
+                            onClick={() => setApproveModalTxId(tx.id)}
                           >
                             {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                           </Button>
@@ -413,7 +452,7 @@ export default function TransactionsPage() {
                       size="sm"
                       className="w-full gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm"
                       disabled={updatingId === tx.id}
-                      onClick={() => handleUpdateStatus(tx.id, 'COMPLETED')}
+                      onClick={() => setApproveModalTxId(tx.id)}
                     >
                       {updatingId === tx.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Approve'}
                     </Button>
@@ -444,6 +483,69 @@ export default function TransactionsPage() {
             className="max-w-full max-h-[85vh] md:max-h-[90vh] rounded-xl shadow-2xl object-contain animate-in zoom-in-95 duration-200 ring-1 ring-white/20"
             onClick={(e) => e.stopPropagation()} 
           />
+        </div>
+      )}
+
+      {/* Approve Modal */}
+      {approveModalTxId && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border/50 shadow-2xl rounded-2xl w-full max-w-md p-6 relative">
+            <button 
+              className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+              onClick={() => { setApproveModalTxId(null); setPayoutReceiptFile(null); setPayoutReceiptPreview(null); }}
+              disabled={isUploading || updatingId === approveModalTxId}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-xl font-bold mb-2">Approve Transaction</h2>
+            <p className="text-sm text-muted-foreground mb-6">Upload the payout transfer receipt to instantly notify the client via WhatsApp.</p>
+            
+            <div className="mb-6">
+              {payoutReceiptPreview ? (
+                <div className="relative rounded-xl overflow-hidden border border-border/50 group">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={payoutReceiptPreview} alt="Preview" className="w-full h-48 object-cover" />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                    <Button variant="outline" size="sm" className="text-white border-white/40 hover:bg-white/20" onClick={() => { setPayoutReceiptFile(null); setPayoutReceiptPreview(null); }}>
+                      Remove Image
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border/60 rounded-xl cursor-pointer hover:bg-accent/30 hover:border-primary/50 transition-all bg-card/30">
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground font-medium">Click to upload receipt</p>
+                  </div>
+                  <input type="file" className="hidden" accept="image/*" onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      setPayoutReceiptFile(file)
+                      setPayoutReceiptPreview(URL.createObjectURL(file))
+                    }
+                  }} />
+                </label>
+              )}
+            </div>
+
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => { setApproveModalTxId(null); setPayoutReceiptFile(null); setPayoutReceiptPreview(null); }}
+                disabled={isUploading || updatingId === approveModalTxId}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700 text-white" 
+                onClick={submitApproval}
+                disabled={isUploading || updatingId === approveModalTxId}
+              >
+                {(isUploading || updatingId === approveModalTxId) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                {isUploading ? 'Uploading...' : 'Approve & Send'}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

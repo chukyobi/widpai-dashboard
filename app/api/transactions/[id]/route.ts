@@ -6,7 +6,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { status } = await request.json()
+    const { status, payout_receipt_url } = await request.json()
     const { id } = await params
     
     // Only allow valid statuses
@@ -18,8 +18,8 @@ export async function PATCH(
     }
 
     const result = await query(
-      'UPDATE transactions SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
-      [status, id]
+      'UPDATE transactions SET status = $1, payout_receipt_url = COALESCE($2, payout_receipt_url), updated_at = NOW() WHERE id = $3 RETURNING *',
+      [status, payout_receipt_url || null, id]
     )
 
     if (result.rows.length === 0) {

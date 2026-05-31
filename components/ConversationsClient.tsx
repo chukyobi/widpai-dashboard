@@ -204,6 +204,13 @@ export default function ConversationsClient() {
         setGlobalPaused(globalData.allManual)
       }
       setAppLoading(false)
+
+      // Handle phone URL parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      const phoneParam = urlParams.get('phone')
+      if (phoneParam) {
+        selectSession(phoneParam)
+      }
     })
 
     // Global WebSocket for real-time sidebar updates

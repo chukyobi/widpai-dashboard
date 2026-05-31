@@ -150,7 +150,8 @@ export default function TransactionsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto pb-[80px] md:pb-6">
+    <div className="h-full overflow-y-auto w-full">
+      <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto pb-[80px] md:pb-6">
       {/* Header Area */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-card/40 border border-border/40 p-5 rounded-2xl backdrop-blur-md">
         <div>
@@ -213,16 +214,21 @@ export default function TransactionsPage() {
 
         <div className="flex flex-col w-full md:w-auto">
           <label className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Status</label>
-          <select 
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-10 w-full md:w-[160px] rounded-lg border border-border/50 bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/50"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="PENDING">Pending</option>
-            <option value="COMPLETED">Completed</option>
-            <option value="DISPUTED">Disputed</option>
-          </select>
+          <div className="flex bg-muted/50 p-1 rounded-xl gap-1">
+            {['ALL', 'PENDING', 'COMPLETED', 'DISPUTED'].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+                  statusFilter === status 
+                    ? 'bg-background shadow-sm text-foreground' 
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+                }`}
+              >
+                {status === 'ALL' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
+              </button>
+            ))}
+          </div>
         </div>
 
         {(startDate || endDate || statusFilter !== 'ALL') && (
@@ -295,7 +301,7 @@ export default function TransactionsPage() {
                         Receipt
                       </Button>
                       
-                      <Link href="/conversations">
+                      <Link href={`/conversations?phone=${encodeURIComponent(tx.whatsapp_number)}`}>
                         <Button
                           variant="outline"
                           size="sm"
@@ -381,7 +387,7 @@ export default function TransactionsPage() {
                   Receipt
                 </Button>
                 
-                <Link href="/conversations" className="w-full">
+                <Link href={`/conversations?phone=${encodeURIComponent(tx.whatsapp_number)}`} className="w-full">
                   <Button
                     variant="outline"
                     size="sm"
@@ -441,5 +447,7 @@ export default function TransactionsPage() {
         </div>
       )}
     </div>
+    </div>
   )
 }
+

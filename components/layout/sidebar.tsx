@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { BarChart3, MessageSquare, Shield, LogOut, CreditCard, FileText } from "lucide-react"
+import { BarChart3, MessageSquare, Shield, LogOut, CreditCard, FileText, Settings } from "lucide-react"
 import { logoutAction } from "@/app/(auth)/actions"
 
 export function Sidebar() {
@@ -33,6 +33,10 @@ export function Sidebar() {
               <CreditCard className="h-4 w-4 flex-shrink-0" />
               Payment Methods
             </Link>
+            <Link href="/settings" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary active:scale-95">
+              <Settings className="h-4 w-4 flex-shrink-0" />
+              Bot Settings
+            </Link>
           </nav>
         </div>
 
@@ -60,9 +64,13 @@ export function Sidebar() {
           <FileText className="h-5 w-5" />
           <span className="text-[10px] font-medium">Txns</span>
         </Link>
-        <Link href="/payment-methods" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+        <Link href="/payment-methods" className="hidden md:flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
           <CreditCard className="h-5 w-5" />
           <span className="text-[10px] font-medium">Payments</span>
+        </Link>
+        <Link href="/settings" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-primary transition-colors active:scale-95">
+          <Settings className="h-5 w-5" />
+          <span className="text-[10px] font-medium">Settings</span>
         </Link>
         <form action={logoutAction}>
           <button type="submit" className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl text-muted-foreground hover:text-destructive transition-colors active:scale-95">

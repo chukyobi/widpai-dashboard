@@ -312,9 +312,6 @@ export default function TransactionsPage() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-semibold">{tx.whatsapp_number}</div>
-                      {tx.amount_detected && (
-                        <div className="text-xs text-muted-foreground mt-0.5 font-medium">Amount: <span className="text-foreground/80">{tx.amount_detected}</span></div>
-                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide uppercase border ${
@@ -406,13 +403,6 @@ export default function TransactionsPage() {
                   {tx.status}
                 </span>
               </div>
-              
-              {tx.amount_detected && (
-                <div className="mb-4 text-sm font-medium bg-background/50 px-3 py-2 rounded-lg border border-border/40">
-                  <span className="text-muted-foreground mr-2">Amount Detected:</span>
-                  <span className="text-foreground">{tx.amount_detected}</span>
-                </div>
-              )}
 
               <div className="mt-auto pt-4 grid grid-cols-2 gap-2 border-t border-border/30">
                 <Button

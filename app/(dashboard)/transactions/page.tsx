@@ -505,9 +505,9 @@ export default function TransactionsPage() {
                 <div className="relative rounded-xl overflow-hidden border border-border/50 group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={payoutReceiptPreview} alt="Preview" className="w-full h-48 object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <Button variant="outline" size="sm" className="text-white border-white/40 hover:bg-white/20" onClick={() => { setPayoutReceiptFile(null); setPayoutReceiptPreview(null); }}>
-                      Remove Image
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center transition-all">
+                    <Button variant="outline" className="text-white border-white hover:bg-white/20 shadow-xl backdrop-blur-md font-semibold" onClick={() => { setPayoutReceiptFile(null); setPayoutReceiptPreview(null); }}>
+                      <X className="w-4 h-4 mr-2" /> Remove & Reselect
                     </Button>
                   </div>
                 </div>
@@ -539,7 +539,7 @@ export default function TransactionsPage() {
               <Button 
                 className="bg-emerald-600 hover:bg-emerald-700 text-white" 
                 onClick={submitApproval}
-                disabled={isUploading || updatingId === approveModalTxId}
+                disabled={isUploading || updatingId === approveModalTxId || !payoutReceiptFile}
               >
                 {(isUploading || updatingId === approveModalTxId) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
                 {isUploading ? 'Uploading...' : 'Approve & Send'}

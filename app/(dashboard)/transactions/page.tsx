@@ -153,33 +153,52 @@ export default function TransactionsPage() {
     <div className="h-full overflow-y-auto w-full">
       <div className="space-y-6 animate-fade-in px-4 md:px-8 py-6 max-w-[1600px] mx-auto pb-[80px] md:pb-6">
       {/* Header Area */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 bg-card/40 border border-border/40 p-5 rounded-2xl backdrop-blur-md">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Transactions
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground mt-1">
-            Review, approve, and audit your payment pipeline.
-          </p>
+      <div className="flex flex-col gap-4 bg-card/40 border border-border/40 p-5 rounded-2xl backdrop-blur-md">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 w-full">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text text-transparent">
+              Transactions
+            </h1>
+            <p className="text-sm md:text-base text-muted-foreground mt-1">
+              Review, approve, and audit your payment pipeline.
+            </p>
+          </div>
+          
+          <div className="flex gap-2 w-full md:w-auto">
+            <Button 
+              variant="outline"
+              className="flex-1 md:flex-none md:hidden"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Date Filters
+            </Button>
+            <Button 
+              onClick={handleExportCSV}
+              className="flex-1 md:flex-none bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
+              disabled={filteredTransactions.length === 0}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex gap-2 w-full md:w-auto">
-          <Button 
-            variant="outline"
-            className="flex-1 md:flex-none md:hidden"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            Filters
-          </Button>
-          <Button 
-            onClick={handleExportCSV}
-            className="flex-1 md:flex-none bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-            disabled={filteredTransactions.length === 0}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
+
+        {/* Status Filter Tabs (Always visible) */}
+        <div className="flex bg-muted/50 p-1 rounded-xl gap-1 overflow-x-auto scrollbar-none w-full md:w-fit mt-2">
+          {['ALL', 'PENDING', 'COMPLETED', 'DISPUTED'].map(status => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex-1 md:flex-none whitespace-nowrap ${
+                statusFilter === status 
+                  ? 'bg-background shadow-sm text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
+              }`}
+            >
+              {status === 'ALL' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -210,25 +229,6 @@ export default function TransactionsPage() {
             onChange={(e) => setEndDate(e.target.value)}
             className="h-10 bg-background border-border/50 focus:border-primary/50 transition-colors"
           />
-        </div>
-
-        <div className="flex flex-col w-full md:w-auto">
-          <label className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wider">Status</label>
-          <div className="flex bg-muted/50 p-1 rounded-xl gap-1">
-            {['ALL', 'PENDING', 'COMPLETED', 'DISPUTED'].map(status => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-                  statusFilter === status 
-                    ? 'bg-background shadow-sm text-foreground' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
-                }`}
-              >
-                {status === 'ALL' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
-              </button>
-            ))}
-          </div>
         </div>
 
         {(startDate || endDate || statusFilter !== 'ALL') && (

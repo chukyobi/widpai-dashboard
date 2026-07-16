@@ -65,14 +65,18 @@ export default function TransactionsPage() {
         setTransactions(prev =>
           prev.map(t => (t.id === id ? { ...t, status } : t))
         )
+        setApproveModalTxId(null)
+        setPayoutReceiptFile(null)
+        setPayoutReceiptPreview(null)
+      } else {
+        const data = await res.json().catch(() => null)
+        alert(data?.error || 'Failed to update transaction. Please try again.')
       }
     } catch (error) {
       console.error('Failed to update transaction status', error)
+      alert('Network error while updating the transaction. Please try again.')
     } finally {
       setUpdatingId(null)
-      setApproveModalTxId(null)
-      setPayoutReceiptFile(null)
-      setPayoutReceiptPreview(null)
     }
   }
 

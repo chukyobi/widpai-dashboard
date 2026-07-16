@@ -17,30 +17,51 @@ export async function PATCH(
       )
     }
 
-    const result = await query(
-      'UPDATE transactions SET status = $1, payout_receipt_url = COALESCE($2, payout_receipt_url), updated_at = NOW() WHERE id = $3 RETURNING *',
-      [status, payout_receipt_url || null, id]
+    const previous = await query(
+      'SELECT status, payout_receipt_url FROM transactions WHERE id = $1',
+      [id]
     )
 
-    if (result.rows.length === 0) {
+    if (previous.rows.length === 0) {
       return NextResponse.json(
         { error: 'Transaction not found' },
         { status: 404 }
       )
     }
 
+    const { status: previousStatus, payout_receipt_url: previousReceiptUrl } = previous.rows[0]
+
+    const result = await query(
+      'UPDATE transactions SET status = $1, payout_receipt_url = COALESCE($2, payout_receipt_url), updated_at = NOW() WHERE id = $3 RETURNING *',
+      [status, payout_receipt_url || null, id]
+    )
+
     const transaction = result.rows[0]
 
-    // Trigger n8n webhook so it can message the customer
+    // Trigger n8n webhook so it can message the customer. The status change is
+    // only allowed to stick if the customer actually gets notified - otherwise
+    // roll back so the transaction stays retryable instead of silently stuck
+    // in a new status with no notification ever sent.
     if (process.env.N8N_WEBHOOK_URL) {
       try {
-        fetch(process.env.N8N_WEBHOOK_URL, {
+        const webhookRes = await fetch(process.env.N8N_WEBHOOK_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(transaction)
         })
+        if (!webhookRes.ok) {
+          throw new Error(`n8n webhook responded with status ${webhookRes.status}`)
+        }
       } catch (e) {
-        console.error("Failed to ping n8n webhook", e)
+        console.error('Failed to notify customer via n8n webhook, rolling back status change', e)
+        await query(
+          'UPDATE transactions SET status = $1, payout_receipt_url = $2, updated_at = NOW() WHERE id = $3',
+          [previousStatus, previousReceiptUrl, id]
+        )
+        return NextResponse.json(
+          { error: 'Customer notification failed, so the transaction was not approved. Please try again.' },
+          { status: 502 }
+        )
       }
     }
 

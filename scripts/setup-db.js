@@ -19,6 +19,30 @@ async function setup() {
   `);
   console.log('✅ Users table ready');
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customers (
+      id SERIAL PRIMARY KEY,
+      session_id VARCHAR(255) UNIQUE NOT NULL,
+      whatsapp_number VARCHAR(255),
+      full_name VARCHAR(255),
+      email VARCHAR(255),
+      country VARCHAR(100),
+      id_type VARCHAR(50),
+      id_number VARCHAR(100),
+      id_document_url TEXT,
+      selfie_url TEXT,
+      kyc_status VARCHAR(50) DEFAULT 'not_started',
+      kyc_step VARCHAR(50) DEFAULT 'name',
+      rejection_reason TEXT,
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_customers_session_id ON customers(session_id);
+    CREATE INDEX IF NOT EXISTS idx_customers_kyc_status ON customers(kyc_status);
+  `);
+  console.log('✅ Customers table ready');
+
   const passwordHash = await bcrypt.hash('widpai.alpha1.com', 12);
   await pool.query(`
     INSERT INTO users (name, email, password_hash, role)

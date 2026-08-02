@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { unstable_rethrow } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { loginAction } from "../actions"
@@ -27,10 +28,8 @@ export default function LoginPage() {
             setPending(false) 
           }
         } catch (e) {
-          // Ignore redirect errors, throw everything else
-          if (e && typeof e === 'object' && 'message' in e && (e as any).message === 'NEXT_REDIRECT') {
-            throw e;
-          }
+          // Redirects (and other Next.js control-flow signals) must propagate untouched
+          unstable_rethrow(e)
           console.error(e)
           setError("An unexpected error occurred.")
           setPending(false)

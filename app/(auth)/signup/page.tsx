@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { unstable_rethrow } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { signupAction } from "../actions"
@@ -25,9 +26,7 @@ export default function SignupPage() {
             setPending(false) 
           }
         } catch (e) {
-          if (e && typeof e === 'object' && 'message' in e && (e as any).message === 'NEXT_REDIRECT') {
-            throw e;
-          }
+          unstable_rethrow(e)
           console.error(e)
           setError("An unexpected error occurred.")
           setPending(false)

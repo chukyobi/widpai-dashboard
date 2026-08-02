@@ -8,9 +8,6 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { sessionId } = await params
   const decoded = decodeURIComponent(sessionId)
 

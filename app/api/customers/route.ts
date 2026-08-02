@@ -5,15 +5,25 @@ import { getSession } from '@/lib/auth'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status')
   const search = searchParams.get('search')
 
   try {
-    let sql = `SELECT * FROM customers WHERE 1=1`
+    // 1. Auto-sync any chat sessions that don't have a customer profile yet
+    await query(`
+      INSERT INTO customers (session_id, whatsapp_number, kyc_status, created_at, updated_at)
+      SELECT DISTINCT session_id, session_id, 'not_started', NOW(), NOW()
+      FROM chat_history
+      WHERE session_id NOT IN (SELECT session_id FROM customers)
+        AND session_id IS NOT NULL
+        AND session_id != 'undefined'
+        AND session_id NOT LIKE 'wamid.%'
+      ON CONFLICT (session_id) DO NOTHING
+    `)
+
+    // 2. Fetch customer records
+    let sql = `SELECT * FROM customers WHERE session_id != 'undefined' AND session_id NOT LIKE 'wamid.%'`
     const params: any[] = []
 
     if (status && status !== 'all') {

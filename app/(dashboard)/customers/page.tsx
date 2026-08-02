@@ -64,12 +64,17 @@ export default function CustomersPage() {
       if (search.trim()) params.append('search', search.trim())
 
       const res = await fetch(`/api/customers?${params.toString()}`)
-      if (res.ok) {
-        const data = await res.json()
+      const data = await res.json()
+
+      if (res.ok && Array.isArray(data)) {
         setCustomers(data)
+      } else {
+        console.warn('Customer fetch response:', res.status, data)
+        setCustomers([])
       }
     } catch (err) {
       console.error('Failed to load customers:', err)
+      setCustomers([])
     } finally {
       setLoading(false)
     }

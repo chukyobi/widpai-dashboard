@@ -37,7 +37,22 @@ export async function GET() {
       GROUP BY c.session_id, sh.unread_count
       ORDER BY last_message_at DESC
     `)
-    return NextResponse.json(result.rows)
+    const cleanedRows = result.rows.map(row => {
+      let lastMsg = row.last_message || ''
+      if (lastMsg) {
+        lastMsg = lastMsg
+          .replace(/\[System Context:[\s\S]*?\]/gi, '')
+          .replace(/\s*\|\s*Special Occasion:[\s\S]*/gi, '')
+          .replace(/\s*\|\s*Already Greeted Today:[\s\S]*/gi, '')
+          .trim()
+      }
+      return {
+        ...row,
+        last_message: lastMsg || '—'
+      }
+    })
+
+    return NextResponse.json(cleanedRows)
   } catch (err) {
     console.error('[/api/conversations]', err)
     return NextResponse.json({ error: 'Database error' }, { status: 500 })
